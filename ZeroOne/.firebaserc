@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "mediflow-nexus-2026"
+  },
+  "targets": {
+    "mediflow-nexus-2026": {
+      "hosting": {
+        "zeroonone": [
+          "zeroonone"
+        ]
+      }
+    }
+  }
+}
