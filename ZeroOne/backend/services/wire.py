@@ -21,8 +21,21 @@ def get_mock_data(connector: str, action: str, params: dict):
     
     if connector == "nse-india":
         if action == "get_quote":
-            price = 2847.50 if symbol == "RELIANCE" else 1489.20 if symbol == "INFY" else 1250.00
-            change_pct = 2.34 if symbol == "RELIANCE" else 0.80 if symbol == "INFY" else -1.25
+            PRICE_MAP = {
+                "RELIANCE": 2847.50, "TCS": 3980.15, "INFY": 1489.20,
+                "HDFCBANK": 1532.10, "ICICIBANK": 1110.20, "WIPRO": 452.10,
+                "SBIN": 810.50, "TATAMOTORS": 985.30, "BAJFINANCE": 7234.80,
+                "AXISBANK": 1089.40, "MARUTI": 12450.00, "SUNPHARMA": 1654.20,
+                "LT": 3567.80, "KOTAKBANK": 1876.50, "BHARTIARTL": 1678.90,
+                "ADANIENT": 2456.70, "TITAN": 3421.60, "NTPC": 374.50,
+                "HINDUNILVR": 2345.80, "POWERGRID": 298.40
+            }
+            CHANGE_MAP = {
+                "RELIANCE": 2.34, "TCS": -0.45, "INFY": 0.80,
+                "HDFCBANK": 2.10, "ICICIBANK": -0.96
+            }
+            price = PRICE_MAP.get(symbol, 1250.00 + (hash(symbol) % 1000))
+            change_pct = CHANGE_MAP.get(symbol, round((hash(symbol) % 300 - 150) / 100, 2))
             change = round(price * (change_pct / 100.0), 2)
             return {
                 "symbol": symbol,
@@ -102,9 +115,9 @@ def get_mock_data(connector: str, action: str, params: dict):
     elif connector == "economic-times":
         if action == "search_articles":
             return [
-                {"title": f"{symbol} shares surge as block deals signal institutional accumulation", "url": "https://economictimes.indiatimes.com/article1", "time": "2h ago", "source": "Economic Times"},
-                {"title": f"Why brokerage houses are upgrading targets on {symbol}", "url": "https://economictimes.indiatimes.com/article2", "time": "12h ago", "source": "Economic Times"},
-                {"title": f"Technical charts show breakout potential in {symbol} above resistance", "url": "https://economictimes.indiatimes.com/article3", "time": "1d ago", "source": "Economic Times"}
+                {"title": f"{symbol} Q4 earnings beat consensus estimates by 4.2%, stock surges", "url": f"https://economictimes.indiatimes.com/{symbol.lower()}-q4", "time": "2h ago", "source": "Economic Times"},
+                {"title": f"Institutional investors accumulate {symbol} shares amid positive sector outlook", "url": f"https://economictimes.indiatimes.com/{symbol.lower()}-inst", "time": "6h ago", "source": "Economic Times"},
+                {"title": f"{symbol} management guidance strong for next quarter, analysts upgrade targets", "url": f"https://economictimes.indiatimes.com/{symbol.lower()}-upgrade", "time": "1d ago", "source": "Economic Times"},
             ]
         elif action == "get_article":
             return {"content": "This is a mock full text of the Economic Times news article discussing stock valuations and market sentiments."}

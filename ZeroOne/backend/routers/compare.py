@@ -59,14 +59,21 @@ async def run_comparison(req: CompareRequest):
             "pcr": opt2.get("pcr", 1.0)
         }
         
-        # Get Claude comparison assessment
-        ai_res = await get_claude_comparison(t1, data1, t2, data2)
-        
-        # Merge side-by-side details
-        ai_res["data1"] = data1
-        ai_res["data2"] = data2
-        
-        return ai_res
+        # Get AI comparison assessment — try Claude, fall back to Groq
+        try:
+            ai_res = await get_claude_comparison(t1, data1, t2, data2)
+        except Exception:
+            from services.groq_svc import get_groq_comparison
+            ai_res = await get_groq_comparison(t1, data1, t2, data2)
+
+        # Nest response under "comparison" key as expected by the frontend
+        response = {
+            "ticker1": {"symbol": t1, "data": data1},
+            "ticker2": {"symbol": t2, "data": data2},
+            "comparison": ai_res  # ai_res already has {analysis, winner, ticker1, ticker2}
+        }
+
+        return response
     except Exception as e:
         print(f"[COMPARE ROUTER ERROR] Failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

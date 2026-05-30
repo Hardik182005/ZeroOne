@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from utils.tickers import TICKERS
 from services.cache import get_cached, set_cached
 from services.wire import fetch_all_stock_data, parse_all_wire_responses
-from services.claude import get_claude_verdict
+from services.groq_svc import get_groq_verdict
 
 router = APIRouter(prefix="/api/stock", tags=["stock"])
 
@@ -104,11 +104,11 @@ async def get_stock_intelligence(ticker: str):
     unified_data["news_sentiment"] = news_sentiment
     unified_data["promoter_trend"] = promoter_trend
 
-    # 6. Get AI verdict via Claude (falls back to Gemini internally on failure)
+    # 6. Get AI verdict via Groq (falls back to mock internally on failure)
     try:
-        verdict = await get_claude_verdict(ticker, unified_data)
+        verdict = await get_groq_verdict(ticker, unified_data)
     except Exception as e:
-        print(f"[STOCK ROUTER] Claude analysis failed: {e}")
+        print(f"[STOCK ROUTER] Groq analysis failed: {e}")
         raise HTTPException(status_code=500, detail="AI verdict model failed")
 
     # 7. Assemble final response

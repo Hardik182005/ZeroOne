@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import StockView from "./pages/StockView";
 import Sectors from "./pages/Sectors";
 import Compare from "./pages/Compare";
+import Settings from "./pages/Settings";
 
 function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,6 +44,7 @@ function Layout() {
                   { href: '#/dashboard',      icon: 'insights',    label: 'Market Overview' },
                   { href: '#/sectors',        icon: 'grid_view',   label: 'Sector Flow'     },
                   { href: '#/compare',        icon: 'compare_arrows', label: 'Earnings Radar' },
+                  { href: '#/settings',       icon: 'settings',       label: 'AI Chat'        },
                 ].map(({ href, icon, label }) => (
                   <li key={href}>
                     <a
@@ -90,6 +92,7 @@ export default function App() {
           <Route path="/stock/:ticker" element={<StockView />} />
           <Route path="/sectors" element={<Sectors />} />
           <Route path="/compare" element={<Compare />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

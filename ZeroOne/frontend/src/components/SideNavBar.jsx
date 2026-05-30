@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: "/dashboard",      icon: "insights",    label: "Market Overview" },
   { to: "/sectors",        icon: "group_work",  label: "Sector Flow"     },
   { to: "/compare",        icon: "event_note",  label: "Earnings Radar"  },
+  { to: "/settings",       icon: "settings",    label: "AI Chat"         },
 ];
 
 export default function SideNavBar() {

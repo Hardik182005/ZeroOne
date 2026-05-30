@@ -77,4 +77,11 @@ export const api = {
       if (!r.ok) throw new Error("Fetch market status failed");
       return r.json();
     }),
+
+  chat: (message, context = "") =>
+    fetch(`${API_BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, context })
+    }).then(r => r.json()),
 }

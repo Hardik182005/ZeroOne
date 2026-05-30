@@ -30,7 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers import stock, sectors, compare, voice, pdf, briefing, search, ticker_tape, market_status
+from routers import stock, sectors, compare, voice, pdf, briefing, search, ticker_tape, market_status, chat
 
 app.include_router(stock.router)
 app.include_router(sectors.router)
@@ -41,6 +41,7 @@ app.include_router(briefing.router)
 app.include_router(search.router)
 app.include_router(ticker_tape.router)
 app.include_router(market_status.router)
+app.include_router(chat.router)
 
 @app.get("/api/health", tags=["health"])
 async def health_check():
