@@ -4,16 +4,41 @@ import httpx
 import random
 
 ANAKIN_API_KEY = os.getenv("ANAKIN_API_KEY", "")
-ANAKIN_BASE = "https://api.anakin.ai/v1/wire"
+
+# Anakin Wire connectors are exposed as chatbot apps with numeric IDs.
+# Correct endpoint: POST https://api.anakin.ai/v1/chatbots/{numericId}/messages
+# NOTE: /v1/wire/* does NOT exist — those paths 302-redirect to /help/index.html.
+# Retrieve numeric IDs from https://app.anakin.ai after adding each Wire connector app.
+ANAKIN_BASE = "https://api.anakin.ai/v1/chatbots"
+ANAKIN_API_VERSION = "2024-05-06"
+
+# Map each Wire connector slug to its Anakin numeric chatbot ID (set via env vars).
+# Fill these in from the Anakin dashboard (app.anakin.ai -> Wire app -> API tab).
+# If an ID is blank the connector falls back to mock data automatically.
+WIRE_CONNECTOR_IDS = {
+    "nse-india":        os.getenv("ANAKIN_ID_NSE_INDIA", ""),
+    "bse-india":        os.getenv("ANAKIN_ID_BSE_INDIA", ""),
+    "screener-in":      os.getenv("ANAKIN_ID_SCREENER", ""),
+    "economic-times":   os.getenv("ANAKIN_ID_ET", ""),
+    "moneycontrol":     os.getenv("ANAKIN_ID_MC", ""),
+    "fear-greed-index": os.getenv("ANAKIN_ID_FG", ""),
+    "google-trends":    os.getenv("ANAKIN_ID_GT", ""),
+    "stocktwits":       os.getenv("ANAKIN_ID_ST", ""),
+}
 
 # Helper to check if key is unset
 def is_mock_mode():
     return not ANAKIN_API_KEY or ANAKIN_API_KEY.startswith("your_")
 
-HEADERS = {
-    "Authorization": f"Bearer {ANAKIN_API_KEY}",
-    "Content-Type": "application/json"
-}
+def _get_headers():
+    return {
+        "Authorization": f"Bearer {ANAKIN_API_KEY}",
+        "X-Anakin-Api-Version": ANAKIN_API_VERSION,
+        "Content-Type": "application/json",
+    }
+
+# Module-level alias kept for any external code that may reference HEADERS
+HEADERS = _get_headers()
 
 # Dynamic mock data generators for each connector + action
 def get_mock_data(connector: str, action: str, params: dict):
@@ -163,18 +188,40 @@ async def wire_call(connector: str, action: str, params: dict):
         # Artificial delay to mimic API call
         await asyncio.sleep(0.05)
         return get_mock_data(connector, action, params)
-    
+
+    # Look up the numeric chatbot ID for this connector.
+    # If the ID is not configured, fall back to mock immediately (no HTTP call made).
+    chatbot_id = WIRE_CONNECTOR_IDS.get(connector, "")
+    if not chatbot_id:
+        print(f"[WIRE] No chatbot ID configured for connector '{connector}', using mock data")
+        return get_mock_data(connector, action, params)
+
+    # Anakin Wire API: POST /v1/chatbots/{numericId}/messages
+    # The message content encodes the action + params as a JSON string so the
+    # Wire connector can parse it on the Anakin side.
+    import json
+    message_content = json.dumps({"action": action, "params": params})
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             response = await client.post(
-                f"{ANAKIN_BASE}/{connector}",
-                headers=HEADERS,
-                json={"action": action, "params": params}
+                f"{ANAKIN_BASE}/{chatbot_id}/messages",
+                headers=_get_headers(),
+                json={"content": message_content}
             )
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                # Anakin returns {"messages": [...]} — extract the last assistant message
+                messages = data.get("messages", [])
+                if messages:
+                    last_msg = messages[-1].get("content", "{}")
+                    try:
+                        return json.loads(last_msg)
+                    except (json.JSONDecodeError, TypeError):
+                        return {"raw": last_msg}
+                return data
             else:
-                print(f"[WIRE API ERROR] {connector}/{action} returned status {response.status_code}")
+                print(f"[WIRE API ERROR] {connector}/{action} returned status {response.status_code}: {response.text[:200]}")
                 return get_mock_data(connector, action, params)
         except Exception as e:
             print(f"[WIRE API EXCEPT] {connector}/{action} failed: {e}")
