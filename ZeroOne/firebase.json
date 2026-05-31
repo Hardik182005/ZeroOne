@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "zeroonone",
+    "site": "zeroone-in",
     "public": "frontend/dist",
     "ignore": [
       "firebase.json",
