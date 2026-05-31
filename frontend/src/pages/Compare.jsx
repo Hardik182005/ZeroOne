@@ -157,7 +157,7 @@ export default function Compare() {
                   {ticker1.toUpperCase()} Strengths
                 </h4>
                 <ul className="list-disc pl-4 space-y-2 text-sm text-on-surface-variant">
-                  {comparison.ticker1_strengths.map((str, idx) => (
+                  {(comparison.ticker1_strengths || []).map((str, idx) => (
                     <li key={idx}>{str}</li>
                   ))}
                 </ul>
@@ -168,7 +168,7 @@ export default function Compare() {
                   {ticker2.toUpperCase()} Strengths
                 </h4>
                 <ul className="list-disc pl-4 space-y-2 text-sm text-on-surface-variant">
-                  {comparison.ticker2_strengths.map((str, idx) => (
+                  {(comparison.ticker2_strengths || []).map((str, idx) => (
                     <li key={idx}>{str}</li>
                   ))}
                 </ul>
@@ -192,10 +192,10 @@ export default function Compare() {
               </div>
               <div className="flex justify-between border-b border-outline-variant/30 pb-2">
                 <span className="text-on-surface-variant font-body-md font-normal">Change</span>
-                <span className={`w-20 text-right font-bold ${comparison.data1?.change_pct.startsWith("+") ? "positive" : "negative"}`}>
+                <span className={`w-20 text-right font-bold ${comparison.data1?.change_pct?.startsWith("+") ? "positive" : "negative"}`}>
                   {comparison.data1?.change_pct}
                 </span>
-                <span className={`w-20 text-right font-bold ${comparison.data2?.change_pct.startsWith("+") ? "positive" : "negative"}`}>
+                <span className={`w-20 text-right font-bold ${comparison.data2?.change_pct?.startsWith("+") ? "positive" : "negative"}`}>
                   {comparison.data2?.change_pct}
                 </span>
               </div>
