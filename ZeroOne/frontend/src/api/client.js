@@ -167,4 +167,7 @@ export const api = {
   triggerMarketPulseSnapshot: () =>
     fetch(`${API_BASE}/api/marketpulse/snapshot`, { method: "POST" })
       .then(r => r.json()).catch(() => null),
+
+  health: () =>
+    fetch(`${API_BASE}/api/health`).then(r => r.ok ? r.json() : null).catch(() => null),
 }

@@ -1,4 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, Component } from "react";
+
+class ErrorBoundary extends Component {
+  state = { crashed: false };
+  static getDerivedStateFromError() { return { crashed: true }; }
+  componentDidCatch(e) { console.error("[ZeroOne ErrorBoundary]", e); }
+  render() {
+    if (this.state.crashed) return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center px-6">
+        <span className="material-symbols-outlined text-5xl text-[#5317dd]">refresh</span>
+        <p className="text-[18px] font-bold text-[#0d0d0d]">Something went wrong on this page.</p>
+        <button onClick={() => { this.setState({ crashed: false }); window.location.hash = "#/analyse"; }}
+          className="px-6 py-2.5 bg-[#5317dd] text-white rounded-xl font-bold text-[14px] hover:bg-[#4311b8]">
+          Back to Analyse
+        </button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 import { HashRouter as Router, Routes, Route, Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import SideNavBar from "./components/SideNavBar";
 import TopNavBar from "./components/TopNavBar";
@@ -81,22 +100,24 @@ function Layout() {
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route element={<Layout />}>
-          <Route path="/analyse"      element={<Analyse />} />
-          <Route path="/dashboard"    element={<Dashboard />} />
-          <Route path="/stock/:ticker" element={<StockView />} />
-          <Route path="/sectors"      element={<Sectors />} />
-          <Route path="/compare"      element={<Compare />} />
-          <Route path="/settings"     element={<Settings />} />
-          <Route path="/marketpulse"  element={<MarketPulse />} />
-          <Route path="/predict"      element={<Predict />} />
-          <Route path="/assistant"    element={<AIAssistant />} />
-          <Route path="*"             element={<Navigate to="/analyse" replace />} />
-        </Route>
-      </Routes>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          <Route path="/" element={<ErrorBoundary><Landing /></ErrorBoundary>} />
+          <Route element={<Layout />}>
+            <Route path="/analyse"       element={<ErrorBoundary><Analyse /></ErrorBoundary>} />
+            <Route path="/dashboard"     element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+            <Route path="/stock/:ticker" element={<ErrorBoundary><StockView /></ErrorBoundary>} />
+            <Route path="/sectors"       element={<ErrorBoundary><Sectors /></ErrorBoundary>} />
+            <Route path="/compare"       element={<ErrorBoundary><Compare /></ErrorBoundary>} />
+            <Route path="/settings"      element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+            <Route path="/marketpulse"   element={<ErrorBoundary><MarketPulse /></ErrorBoundary>} />
+            <Route path="/predict"       element={<ErrorBoundary><Predict /></ErrorBoundary>} />
+            <Route path="/assistant"     element={<ErrorBoundary><AIAssistant /></ErrorBoundary>} />
+            <Route path="*"              element={<Navigate to="/analyse" replace />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }
