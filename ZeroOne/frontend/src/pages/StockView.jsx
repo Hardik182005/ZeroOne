@@ -245,21 +245,17 @@ export default function StockView() {
     }
 
     try {
+      // api.getStock never throws — returns mock if backend offline
       const res = await api.getStock(sym);
       setData(res);
-      setFrontendCache(sym, res); // cache for 30 min
+      if (!res.demo_mode) setFrontendCache(sym, res);
       try {
         const stored = JSON.parse(localStorage.getItem("zo_recent_analyses") || "[]");
         localStorage.setItem("zo_recent_analyses", JSON.stringify([sym, ...stored.filter(s => s !== sym)].slice(0, 8)));
       } catch { /* ignore */ }
-    } catch (err) {
-      // Backend offline — fall back to demo data so the UI still works
-      const mock = generateMockStockData(sym);
-      setData({ ...mock, demo_mode: true });
-      try {
-        const stored = JSON.parse(localStorage.getItem("zo_recent_analyses") || "[]");
-        localStorage.setItem("zo_recent_analyses", JSON.stringify([sym, ...stored.filter(s => s !== sym)].slice(0, 8)));
-      } catch { /* ignore */ }
+    } catch {
+      // absolute last resort
+      setData(generateMockStockData(sym));
     } finally {
       setLoading(false);
     }
