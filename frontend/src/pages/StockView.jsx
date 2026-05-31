@@ -265,10 +265,19 @@ export default function StockView() {
     fetchStock(false);
   }, [ticker]);
 
+  const safePlay = (el) => {
+    // play() returns a promise that rejects on autoplay policy / load errors —
+    // swallow it and reset state so the UI doesn't get stuck on "Pause".
+    const p = el?.play();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => setPlaying(false));
+    }
+  };
+
   const handlePlayAudio = async () => {
     if (audioUrl) {
-      if (playing) { audioRef.current.pause(); setPlaying(false); }
-      else { audioRef.current.play(); setPlaying(true); }
+      if (playing) { audioRef.current?.pause(); setPlaying(false); }
+      else { setPlaying(true); safePlay(audioRef.current); }
       return;
     }
     setAudioLoading(true);
@@ -276,7 +285,8 @@ export default function StockView() {
       const url = await api.getVoice(ticker.toUpperCase());
       setAudioUrl(url);
       setPlaying(true);
-      setTimeout(() => audioRef.current?.play(), 100);
+      // Wait for the <audio> element to mount with the new src before playing.
+      setTimeout(() => safePlay(audioRef.current), 120);
     } catch {
       alert("Voice narration API error. Check ElevenLabs key configuration.");
     } finally {

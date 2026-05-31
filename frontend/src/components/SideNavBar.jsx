@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: "/predict",     icon: "auto_awesome",   label: "Oracle"       },
   { to: "/dashboard",   icon: "grid_view",      label: "Dashboard"    },
   { to: "/marketpulse", icon: "ssid_chart",     label: "Pulse"        },
+  { to: "/news",        icon: "newspaper",      label: "News"         },
   { to: "/sectors",     icon: "donut_small",    label: "Sectors"      },
   { to: "/compare",     icon: "compare_arrows", label: "Compare"      },
   { to: "/assistant",   icon: "smart_toy",      label: "AI Chat"      },

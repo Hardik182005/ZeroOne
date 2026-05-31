@@ -124,7 +124,24 @@ export const api = {
   getVoice: (ticker) =>
     fetch(`${API_BASE}/api/voice/${ticker}`, { method: "POST" })
       .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
-      .then(blob => URL.createObjectURL(blob)),
+      .then(blob => {
+        // Force an audio mime type so the browser will play it even if the
+        // server response is missing/mislabels the Content-Type header.
+        const audioBlob = blob.type.startsWith("audio/") ? blob : new Blob([blob], { type: "audio/mpeg" });
+        return URL.createObjectURL(audioBlob);
+      }),
+
+  // Text-to-speech for the chat assistant — returns an object URL for an <audio>.
+  speak: (text) =>
+    fetch(`${API_BASE}/api/voice/speak`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    }).then(r => { if (!r.ok) throw new Error(); return r.blob(); })
+      .then(blob => {
+        const audioBlob = blob.type.startsWith("audio/") ? blob : new Blob([blob], { type: "audio/mpeg" });
+        return URL.createObjectURL(audioBlob);
+      }),
 
   getMorningBriefing: (tickers) =>
     fetch(`${API_BASE}/api/briefing`, {
@@ -138,14 +155,25 @@ export const api = {
     fetch(`${API_BASE}/api/pdf/${ticker}`)
       .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
       .then(blob => {
-        const url = URL.createObjectURL(blob);
+        // Force a PDF mime type in case the server omits/mislabels it.
+        const pdfBlob = blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
+        const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement("a");
-        a.href = url; a.download = `ZeroOne_${ticker}_Report.pdf`; a.click();
-        URL.revokeObjectURL(url);
+        a.href = url;
+        a.download = `ZeroOne_${ticker}_Report.pdf`;
+        // Anchor must be in the DOM for the click to trigger a download in Firefox.
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Revoke on the next tick so the download has a chance to start.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }),
 
   getTickerTape: () =>
     fetch(`${API_BASE}/api/ticker-tape`).then(r => r.ok ? r.json() : []).catch(() => []),
+
+  // SSE endpoint URL for live ticker updates (consumed via EventSource).
+  tickerStreamUrl: () => `${API_BASE}/api/ticker-tape/stream`,
 
   getMarketMovers: () =>
     fetch(`${API_BASE}/api/ticker-tape/movers`)

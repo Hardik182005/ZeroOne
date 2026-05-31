@@ -18,21 +18,48 @@ export default function TickerBar() {
 
   useEffect(() => {
     let active = true;
-    const fetchTape = async () => {
-      try {
-        const data = await api.getTickerTape();
-        if (data && data.length > 0 && active) {
-          setTicks(data);
-        }
-      } catch (err) {
-        // silently use default ticks
-      }
+    let es = null;
+    let pollInterval = null;
+
+    const applyData = (data) => {
+      if (active && Array.isArray(data) && data.length > 0) setTicks(data);
     };
+
+    const fetchTape = async () => {
+      try { applyData(await api.getTickerTape()); } catch { /* keep last ticks */ }
+    };
+
+    const startPolling = () => {
+      if (pollInterval) return;
+      fetchTape();
+      pollInterval = setInterval(fetchTape, 15000);
+    };
+
+    // Prefer a live SSE stream; fall back to polling if it errors or is
+    // unsupported (e.g. backend offline / old revision).
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        es = new EventSource(api.tickerStreamUrl());
+        es.onmessage = (e) => { try { applyData(JSON.parse(e.data)); } catch { /* ignore */ } };
+        es.onerror = () => {
+          // EventSource auto-reconnects, but if it can't connect at all, also
+          // run polling so the bar still updates.
+          if (!pollInterval) startPolling();
+        };
+      } catch {
+        startPolling();
+      }
+    } else {
+      startPolling();
+    }
+
+    // Always do one immediate fetch so the bar fills instantly.
     fetchTape();
-    const interval = setInterval(fetchTape, 30000);
+
     return () => {
       active = false;
-      clearInterval(interval);
+      if (es) es.close();
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, []);
 

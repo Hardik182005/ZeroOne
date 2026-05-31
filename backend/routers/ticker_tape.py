@@ -1,7 +1,9 @@
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from services.wire import fetch_ticker_tape, wire_call
 from services.cache import get_cached, set_cached
 import asyncio
+import json
 
 router = APIRouter(prefix="/api/ticker-tape", tags=["ticker-tape"])
 
@@ -11,20 +13,48 @@ _INDICES = [
     {"symbol": "BANKNIFTY", "price": "48,159.00",  "change_pct": -0.12},
 ]
 
+def _fetch_live_index(ticker: str) -> dict:
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker)
+        fi = t.fast_info
+        price = fi.last_price
+        prev = fi.previous_close or price
+        chg = price - prev
+        chg_p = (chg / prev) * 100 if prev else 0.0
+        sym_map = {"^NSEI": "NIFTY 50", "^BSESN": "SENSEX", "^NSEBANK": "BANKNIFTY"}
+        return {
+            "symbol": sym_map.get(ticker, ticker),
+            "price": f"{price:,.2f}",
+            "change_pct": round(chg_p, 2),
+            "change": round(chg, 2)
+        }
+    except Exception:
+        return None
 
-@router.get("")
-async def get_ticker_tape():
-    cached = await get_cached("zeroonone:ticker-tape")
-    if cached:
-        return cached
+async def get_live_indices():
+    loop = asyncio.get_event_loop()
+    tasks = []
+    for t in ["^NSEI", "^BSESN", "^NSEBANK"]:
+        tasks.append(loop.run_in_executor(None, _fetch_live_index, t))
+    results = await asyncio.gather(*tasks)
+    parsed = [r for r in results if r is not None]
+    if len(parsed) == 3:
+        return parsed
+    return _INDICES
+
+
+async def _compute_ticks():
+    """Build the full ticker list (indices + movers), with a static fallback."""
+    try:
+        indices = await get_live_indices()
+    except Exception:
+        indices = _INDICES
 
     try:
         raw = await fetch_ticker_tape()
-        gainers = raw.get("gainers", [])
-        losers = raw.get("losers", [])
-
-        ticks = list(_INDICES)
-        for stock in (gainers + losers):
+        ticks = list(indices)
+        for stock in (raw.get("gainers", []) + raw.get("losers", [])):
             pct_str = stock.get("pct", "0%").replace("%", "").replace("+", "")
             try:
                 change_pct = float(pct_str)
@@ -35,13 +65,9 @@ async def get_ticker_tape():
                 "price": stock.get("ltp", "0"),
                 "change_pct": change_pct,
             })
-
-        await set_cached("zeroonone:ticker-tape", ticks, ttl=60)
         return ticks
-
     except Exception:
-        # Reliable static fallback
-        fallback = list(_INDICES) + [
+        return list(indices) + [
             {"symbol": "RELIANCE",   "price": "2,934.50",  "change_pct": 1.20},
             {"symbol": "HDFCBANK",   "price": "1,532.10",  "change_pct": -0.40},
             {"symbol": "INFY",       "price": "1,489.20",  "change_pct": 0.80},
@@ -53,7 +79,45 @@ async def get_ticker_tape():
             {"symbol": "MARUTI",     "price": "12,450.00", "change_pct": 2.10},
             {"symbol": "TATASTEEL",  "price": "165.40",    "change_pct": 1.80},
         ]
-        return fallback
+
+
+@router.get("")
+async def get_ticker_tape():
+    cached = await get_cached("zeroonone:ticker-tape")
+    if cached:
+        return cached
+    ticks = await _compute_ticks()
+    await set_cached("zeroonone:ticker-tape", ticks, ttl=60)
+    return ticks
+
+
+@router.get("/stream")
+async def stream_ticker_tape():
+    """Server-Sent Events stream — pushes the ticker tape every ~12s so the
+    frontend updates live without manual polling. Cached value is reused to
+    avoid hammering the upstream source."""
+    async def event_gen():
+        # Emit immediately, then on an interval.
+        while True:
+            try:
+                cached = await get_cached("zeroonone:ticker-tape")
+                ticks = cached if cached else await _compute_ticks()
+                if not cached:
+                    await set_cached("zeroonone:ticker-tape", ticks, ttl=60)
+                yield f"data: {json.dumps(ticks)}\n\n"
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps(str(e))}\n\n"
+            await asyncio.sleep(12)
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/movers")

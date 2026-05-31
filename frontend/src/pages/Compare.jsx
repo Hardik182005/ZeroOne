@@ -16,6 +16,9 @@ export default function Compare() {
     setComparison(null);
     try {
       const result = await api.compareStocks(ticker1.toUpperCase(), ticker2.toUpperCase());
+      // api.compareStocks resolves to null on failure (it never throws),
+      // so fall through to the mock comparison when there's no usable result.
+      if (!result) throw new Error("No comparison data");
       setComparison(result);
     } catch (err) {
       console.warn("Failed to fetch comparison, using premium mock comparison.");

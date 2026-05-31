@@ -1,11 +1,33 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from services.elevenlabs_svc import generate_voice
 from services.cache import get_cached
 from services.wire import wire_call
 import io
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
+
+
+class SpeakRequest(BaseModel):
+    text: str
+
+
+# NOTE: declared BEFORE "/{ticker}" so "/speak" isn't captured as a ticker.
+@router.post("/speak")
+async def speak_text(req: SpeakRequest):
+    """Generic text-to-speech for the chat assistant (any text → audio)."""
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    text = text[:1000]  # cap length to bound TTS latency/cost
+    try:
+        audio_bytes = await generate_voice(text, voice_type="chat")
+        return StreamingResponse(io.BytesIO(audio_bytes), media_type="audio/mpeg")
+    except Exception as e:
+        print(f"[VOICE SPEAK ERROR] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/{ticker}")
 async def play_stock_verdict(ticker: str):

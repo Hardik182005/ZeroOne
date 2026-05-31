@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [marketStatus, setMarketStatus] = useState(null);
   const [recentHistory, setRecentHistory] = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [indices, setIndices]         = useState(null);
 
   useEffect(() => {
     // Load recent history from localStorage
@@ -49,6 +50,15 @@ export default function Dashboard() {
           })));
         }).catch(() => {}),
         api.getMarketStatus().then(d => { if (active && d) setMarketStatus(d); }).catch(() => {}),
+        api.getTickerTape().then(d => {
+          if (active && d) {
+            const nifty = d.find(x => x.symbol === "NIFTY 50");
+            const sensex = d.find(x => x.symbol === "SENSEX");
+            if (nifty || sensex) {
+              setIndices({ nifty, sensex });
+            }
+          }
+        }).catch(() => {}),
       ]);
       if (active) setLoading(false);
     };
@@ -110,22 +120,32 @@ export default function Dashboard() {
           <p className="font-body-md text-body-md text-on-surface-variant">Live overview · NSE/BSE</p>
         </div>
         <div className="flex gap-6 w-full md:w-auto">
-          {["NIFTY 50", "SENSEX"].map((idx, i) => (
-            <div key={idx} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex-1 min-w-[180px]">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-label-caps text-label-caps text-on-surface-variant">{idx}</span>
-                <span className="material-symbols-outlined positive text-sm">trending_up</span>
+          {["NIFTY 50", "SENSEX"].map((idx, i) => {
+            const item = i === 0 ? indices?.nifty : indices?.sensex;
+            const price = item?.price ?? (i === 0 ? "22,514.65" : "74,227.63");
+            const change_pct = item?.change_pct ?? (i === 0 ? 0.45 : 0.51);
+            const isUp = change_pct >= 0;
+            return (
+              <div key={idx} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex-1 min-w-[180px]">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-label-caps text-label-caps text-on-surface-variant">{idx}</span>
+                  <span className={`material-symbols-outlined ${isUp ? "positive" : "negative"} text-sm`}>
+                    {isUp ? "trending_up" : "trending_down"}
+                  </span>
+                </div>
+                {loading ? (
+                  <Skeleton className="h-8 w-28 mb-1" />
+                ) : (
+                  <>
+                    <div className="font-data-mono text-2xl font-bold">{price}</div>
+                    <div className={`font-data-mono ${isUp ? "positive" : "negative"} text-sm mt-1`}>
+                      {isUp ? "+" : ""}{change_pct}%
+                    </div>
+                  </>
+                )}
               </div>
-              {loading ? (
-                <Skeleton className="h-8 w-28 mb-1" />
-              ) : (
-                <>
-                  <div className="font-data-mono text-2xl font-bold">{i === 0 ? "22,514.65" : "74,227.63"}</div>
-                  <div className="font-data-mono positive text-sm mt-1">{i === 0 ? "+101.20 (0.45%)" : "+350.80 (0.51%)"}</div>
-                </>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

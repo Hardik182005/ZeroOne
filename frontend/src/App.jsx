@@ -21,6 +21,7 @@ class ErrorBoundary extends Component {
 import { HashRouter as Router, Routes, Route, Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import SideNavBar from "./components/SideNavBar";
 import TopNavBar from "./components/TopNavBar";
+import ChatOrb from "./components/ChatOrb";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import StockView from "./pages/StockView";
@@ -31,6 +32,7 @@ import MarketPulse from "./pages/MarketPulse";
 import Analyse from "./pages/Analyse";
 import AIAssistant from "./pages/AIAssistant";
 import Predict from "./pages/Predict";
+import NewsSentiment from "./pages/NewsSentiment";
 
 function MobileDrawer({ open, onClose }) {
   const navigate = useNavigate();
@@ -38,6 +40,7 @@ function MobileDrawer({ open, onClose }) {
     { href: '#/analyse',     icon: 'search',         label: 'Analyse Stock'  },
     { href: '#/dashboard',   icon: 'grid_view',      label: 'Dashboard'      },
     { href: '#/marketpulse', icon: 'ssid_chart',     label: 'Pulse'          },
+    { href: '#/news',        icon: 'newspaper',      label: 'News Sentiment' },
     { href: '#/sectors',     icon: 'donut_small',    label: 'Sectors'        },
     { href: '#/compare',     icon: 'compare_arrows', label: 'Compare'        },
     { href: '#/assistant',   icon: 'smart_toy',      label: 'AI Assistant'   },
@@ -88,6 +91,9 @@ function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Global floating AI chat orb — visible on every route */}
+      <ChatOrb />
     </div>
   );
 }
@@ -106,6 +112,7 @@ export default function App() {
             <Route path="/compare"       element={<ErrorBoundary><Compare /></ErrorBoundary>} />
             <Route path="/settings"      element={<ErrorBoundary><Settings /></ErrorBoundary>} />
             <Route path="/marketpulse"   element={<ErrorBoundary><MarketPulse /></ErrorBoundary>} />
+            <Route path="/news"          element={<ErrorBoundary><NewsSentiment /></ErrorBoundary>} />
             <Route path="/predict"       element={<ErrorBoundary><Predict /></ErrorBoundary>} />
             <Route path="/assistant"     element={<ErrorBoundary><AIAssistant /></ErrorBoundary>} />
             <Route path="*"              element={<Navigate to="/analyse" replace />} />
