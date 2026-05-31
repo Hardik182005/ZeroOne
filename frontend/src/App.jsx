@@ -67,12 +67,6 @@ function MobileDrawer({ open, onClose }) {
             </li>
           ))}
         </ul>
-        <div className="p-4 border-t border-gray-100">
-          <button onClick={() => { navigate("/analyse"); onClose(); }}
-            className="w-full bg-gray-900 text-white text-[13px] font-bold py-2.5 rounded-lg hover:bg-gray-800 transition-colors">
-            Upgrade Plan
-          </button>
-        </div>
       </div>
     </div>
   );

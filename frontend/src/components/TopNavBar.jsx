@@ -129,7 +129,6 @@ export default function TopNavBar({ onToggleMobileMenu }) {
         </button>
         <button onClick={() => navigate("/settings")}
           className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors ml-1">
-          <span className="text-[12px] font-semibold text-gray-600 hidden sm:block">Pro Tier</span>
           <div className="w-6 h-6 rounded-full bg-[#6434ed] flex items-center justify-center text-white text-[11px] font-bold">
             {initial}
           </div>

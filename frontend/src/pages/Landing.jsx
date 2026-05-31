@@ -790,55 +790,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="py-[80px] bg-[#f5f3ff] border-b border-[#cac3d9]/30">
-        <div className="max-w-[900px] mx-auto px-8">
-          <div className="text-center mb-12">
-            <span className="text-[11px] font-bold text-[#5317dd] tracking-[0.2em] uppercase block mb-3">Pricing</span>
-            <h2 className="text-[32px] font-bold text-[#0d0d0d] tracking-tight">Simple. No surprises.</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[680px] mx-auto">
-            {/* Free */}
-            <div className="bg-white border border-[#e8e4f0] rounded-2xl p-7">
-              <div className="mb-6">
-                <h3 className="text-[18px] font-bold text-[#0d0d0d] mb-1">Free</h3>
-                <div className="text-[36px] font-bold text-[#0d0d0d]">₹0 <span className="text-[16px] font-normal text-[#797487]">/ month</span></div>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {["10 stock analyses per day", "AI verdict (Groq)", "Sector rotation heatmap", "MarketPulse narratives", "Basic options pulse"].map(f => (
-                  <li key={f} className="flex items-center gap-2.5 text-[13px] text-[#4a4560]">
-                    <span className="material-symbols-outlined text-[16px] text-[#00875a]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => navigate("/analyse")} className="w-full border-2 border-[#5317dd] text-[#5317dd] font-bold text-[13px] py-2.5 rounded-xl hover:bg-[#f5f3ff] transition-colors">
-                Get Started Free
-              </button>
-            </div>
-            {/* Pro */}
-            <div className="bg-[#5317dd] border border-[#4210b8] rounded-2xl p-7 relative overflow-hidden">
-              <div className="absolute top-4 right-4 bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">MOST POPULAR</div>
-              <div className="mb-6">
-                <h3 className="text-[18px] font-bold text-white mb-1">Pro</h3>
-                <div className="text-[36px] font-bold text-white">₹999 <span className="text-[16px] font-normal text-white/60">/ month</span></div>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {["Unlimited stock analyses", "Voice narration (ElevenLabs)", "PDF research reports", "GPT-4o stock compare", "Morning briefing audio", "Earnings radar alerts", "Priority AI response"].map(f => (
-                  <li key={f} className="flex items-center gap-2.5 text-[13px] text-white/90">
-                    <span className="material-symbols-outlined text-[16px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => navigate("/analyse")} className="w-full bg-white text-[#5317dd] font-bold text-[13px] py-2.5 rounded-xl hover:opacity-90 transition-opacity shadow-sm">
-                Upgrade to Pro
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 8. Final CTA */}
       <section className="bg-white text-[#0d0d0d] relative overflow-hidden border-t border-[#cac3d9]/30 py-[100px]">
         <div className="absolute inset-0 bg-[#fafafa] opacity-50"></div>

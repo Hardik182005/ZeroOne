@@ -97,14 +97,6 @@ export default function SideNavBar() {
           </button>
         </div>
 
-        {/* Upgrade button — black like DealRadar */}
-        <button
-          onClick={() => navigate("/settings")}
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white text-[13px] font-bold py-2.5 rounded-lg transition-colors mb-3"
-        >
-          Upgrade Plan
-        </button>
-
         {/* User profile row */}
         <button
           onClick={() => navigate("/settings")}
