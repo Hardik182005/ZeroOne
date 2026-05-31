@@ -4,6 +4,7 @@ import { api } from "../api/client";
 
 const NAV_ITEMS = [
   { to: "/analyse",     icon: "search",         label: "Analyse"      },
+  { to: "/predict",     icon: "auto_awesome",   label: "Oracle"       },
   { to: "/dashboard",   icon: "grid_view",      label: "Dashboard"    },
   { to: "/marketpulse", icon: "ssid_chart",     label: "Pulse"        },
   { to: "/sectors",     icon: "donut_small",    label: "Sectors"      },

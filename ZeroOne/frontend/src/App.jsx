@@ -11,6 +11,7 @@ import Settings from "./pages/Settings";
 import MarketPulse from "./pages/MarketPulse";
 import Analyse from "./pages/Analyse";
 import AIAssistant from "./pages/AIAssistant";
+import Predict from "./pages/Predict";
 
 function MobileDrawer({ open, onClose }) {
   const navigate = useNavigate();
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="/compare"      element={<Compare />} />
           <Route path="/settings"     element={<Settings />} />
           <Route path="/marketpulse"  element={<MarketPulse />} />
+          <Route path="/predict"      element={<Predict />} />
           <Route path="/assistant"    element={<AIAssistant />} />
           <Route path="*"             element={<Navigate to="/analyse" replace />} />
         </Route>
