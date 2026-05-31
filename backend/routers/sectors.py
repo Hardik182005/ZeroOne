@@ -20,10 +20,10 @@ async def get_sector_rotation():
         from utils.helpers import parse_sector_data
         data = parse_sector_data([{}, {}])
 
-    # Try Claude for market summary
+    # Try AI summary helper
     ai_summary = "Sector rotation data loaded. Monitor FII flows for directional cues."
     try:
-        from services.claude import get_claude_verdict
+        from services.ai_helpers import get_ai_verdict
         sector_text = f"Sectors by FII flow: {data.get('sectors', [])[:5]}. Top buying: {data.get('top_buying', [])}. Top selling: {data.get('top_selling', [])}."
         summary_data = {
             "quote": {"price": 0, "change_pct": 0, "volume": "N/A", "week52_high": 0, "week52_low": 0, "market_cap": "N/A", "sector": "Market"},
@@ -34,7 +34,7 @@ async def get_sector_rotation():
             "pcr": 1.0, "max_pain": 0, "earnings_within_72h": False,
             "sector_overview": sector_text
         }
-        verdict = await get_claude_verdict("NIFTY50", summary_data)
+        verdict = await get_ai_verdict("NIFTY50", summary_data)
         ai_summary = verdict.get("analysis", ai_summary)
     except Exception as e:
         print(f"[SECTORS] AI summary failed: {e}")

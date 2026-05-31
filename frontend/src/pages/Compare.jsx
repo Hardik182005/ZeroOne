@@ -72,7 +72,7 @@ export default function Compare() {
     <div className="p-gutter max-w-container-max mx-auto w-full">
       <div className="mb-8 glass-card p-6 rounded-xl card-inner-stroke">
         <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Compare Stocks</h2>
-        <p className="font-body-md text-body-md text-on-surface-variant">Compare two NSE equity assets side-by-side using Claude AI analytics</p>
+        <p className="font-body-md text-body-md text-on-surface-variant">Compare two NSE equity assets side-by-side using ZeroOne AI analytics</p>
       </div>
 
       {/* Input Form */}
@@ -109,7 +109,7 @@ export default function Compare() {
       {loading && (
         <div className="flex flex-col items-center justify-center h-64">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 font-label-caps text-on-surface-variant animate-pulse">Running Dual Parallel Wires + Claude AI...</p>
+          <p className="mt-4 font-label-caps text-on-surface-variant animate-pulse">Running Dual Parallel Wires + ZeroOne AI...</p>
         </div>
       )}
 
@@ -120,7 +120,7 @@ export default function Compare() {
             {/* Overview Card */}
             <div className="glass-card p-6 rounded-xl card-inner-stroke border-l-4 border-l-[#6c3ff5]">
               <div className="flex justify-between items-center mb-4">
-                <span className="font-label-caps text-xs text-outline">CLAUDE AI COMPARISON SUMMARY</span>
+                <span className="font-label-caps text-xs text-outline">ZEROONE AI COMPARISON SUMMARY</span>
                 <span className="bg-primary/10 text-primary font-bold font-label-caps text-xs px-3 py-1 rounded">
                   Winner: {comparison.overall_winner}
                 </span>

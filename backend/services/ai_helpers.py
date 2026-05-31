@@ -1,18 +1,14 @@
-# Anthropic removed — all AI calls now go through Groq (groq_svc.py)
-# This file is kept as a thin redirect so imports don't break.
-
 from services.groq_svc import (
-    get_groq_verdict as get_claude_verdict,
-    get_groq_comparison as get_claude_comparison,
-    build_prompt as build_claude_prompt,
+    get_groq_verdict as get_ai_verdict,
+    get_groq_comparison as get_ai_comparison,
+    build_prompt as build_ai_prompt,
 )
 from services.gemini import get_mock_verdict_fallback
 
 
-async def get_claude_morning_briefing(tickers: list, stock_data: dict) -> str:
+async def get_ai_morning_briefing(tickers: list, stock_data: dict) -> str:
     """Generate morning briefing script via Groq."""
     from services.groq_svc import get_groq_chat_response
-    import json
     tickers_str = ", ".join(tickers) if tickers else "the market"
     prompt = (
         f"Generate a 250-word morning market briefing audio script for these NSE stocks: {tickers_str}. "

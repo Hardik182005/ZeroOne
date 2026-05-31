@@ -692,7 +692,7 @@ export default function Landing() {
                   <span className={`material-symbols-outlined text-[28px] text-[#6C3FF5] ${pipelineStep === 4 ? 'animate-rotate-once' : ''}`}>psychology</span>
                 </div>
                 <div className="text-center mt-2 bg-white/80 backdrop-blur-sm rounded-xl py-2 px-1">
-                  <span className="font-title-md text-[14px] text-[#0D0D0D] font-semibold block">Claude + Gemini</span>
+                  <span className="font-title-md text-[14px] text-[#0D0D0D] font-semibold block">Llama + Gemini</span>
                   <span className="font-body-md text-[12px] text-[#9B98B8] block mb-3">{pipelineGrokStatus}</span>
                   <div className="bg-[#F5A623]/10 text-[#F5A623] font-title-md font-semibold text-[10px] px-3 py-1 rounded-full inline-flex items-center gap-1 border border-[#F5A623]/20 animate-heartbeat-pulse">
                     ⚡ Alert

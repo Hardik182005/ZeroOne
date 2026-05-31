@@ -16,9 +16,9 @@ async def get_briefing(req: BriefingRequest):
         raise HTTPException(status_code=400, detail="List of tickers cannot be empty")
 
     try:
-        # Generate AI briefing script with Claude
-        from services.claude import get_claude_morning_briefing
-        script = await get_claude_morning_briefing(req.tickers, {})
+        # Generate AI briefing script
+        from services.ai_helpers import get_ai_morning_briefing
+        script = await get_ai_morning_briefing(req.tickers, {})
 
         # Convert to audio with ElevenLabs
         audio_bytes = await generate_voice(script, voice_type="briefing")
