@@ -2,7 +2,8 @@ import os
 import json
 import redis.asyncio as redis
 
-REDIS_URL = os.getenv("REDIS_URL", "")
+from utils.env import clean_env
+REDIS_URL = clean_env("REDIS_URL")
 _redis_client = None
 
 

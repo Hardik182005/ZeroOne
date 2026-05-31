@@ -4,8 +4,9 @@ try:
 except ImportError:
     from elevenlabs import ElevenLabs
 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
+from utils.env import clean_env
+ELEVENLABS_API_KEY = clean_env("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = clean_env("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
 
 # Tiny 1-second silence MP3 file bytes as fail-safe fallback
 MOCK_MP3_SILENCE = (

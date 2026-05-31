@@ -1,4 +1,5 @@
 import os
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -8,10 +9,19 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup must NEVER hang — uvicorn only begins serving HTTP after this
+    # completes. Guard Redis init with a hard timeout so a slow/unreachable
+    # Redis can't wedge the whole service (was causing Cloud Run 504s).
     from services.cache import init_redis, close_redis
-    await init_redis()
+    try:
+        await asyncio.wait_for(init_redis(), timeout=3.0)
+    except Exception as e:
+        print(f"[STARTUP] Redis init skipped ({e}). Running without cache layer.")
     yield
-    await close_redis()
+    try:
+        await close_redis()
+    except Exception:
+        pass
 
 app = FastAPI(
     title="ZeroOne API",
@@ -20,7 +30,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,https://zeroonone.web.app,https://zeroonone.firebaseapp.com").split(",")
+from utils.env import clean_env
+_default_origins = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,https://zeroone-in.web.app,https://zeroonone.web.app,https://zeroonone.firebaseapp.com"
+# clean_env strips a BOM that would otherwise corrupt the first origin; also
+# strip each entry so no origin carries stray whitespace.
+origins = [o.strip() for o in clean_env("CORS_ORIGINS", _default_origins).split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,

@@ -3,7 +3,8 @@ import asyncio
 import httpx
 import json
 
-ANAKIN_API_KEY = os.getenv("ANAKIN_API_KEY", "")
+from utils.env import clean_env
+ANAKIN_API_KEY = clean_env("ANAKIN_API_KEY")
 ANAKIN_BASE    = "https://api.anakin.ai/v1/chatbots"
 ANAKIN_API_VERSION = "2024-05-06"
 
@@ -374,13 +375,16 @@ async def wire_call(connector: str, action: str, params: dict):
 
 # ── Background anakin.io cache (survives across requests) ─────────────────────
 _anakin_bg: dict = {}   # ticker → parsed anakin data
+_bg_tasks: set = set()  # keep strong refs so tasks aren't GC'd mid-flight
 
 async def _bg_anakin_scrape(ticker: str):
     """Fire anakin.io scraping and store result — runs in background, never blocks."""
+    print(f"[anakin.io BG] {ticker} starting scrape…")
     try:
         from services.anakin_io import fetch_all_anakin
         data = await fetch_all_anakin(ticker)
-        _anakin_bg[ticker] = data
+        if data:
+            _anakin_bg[ticker] = data
         print(f"[anakin.io BG] {ticker} done — data keys: {list(data.keys())}")
     except Exception as e:
         print(f"[anakin.io BG] {ticker} failed: {e}")
@@ -405,8 +409,12 @@ async def fetch_all_stock_data(ticker: str, company_name: str):
     # 1. Inject any previously scraped anakin.io data
     _inject_anakin(ticker)
 
-    # 2. Start new anakin.io scrape in BACKGROUND (non-blocking, ~90 sec)
-    asyncio.create_task(_bg_anakin_scrape(ticker))
+    # 2. Start new anakin.io scrape in BACKGROUND (non-blocking, ~90 sec).
+    #    Keep a strong reference so the task isn't garbage-collected mid-run
+    #    (asyncio only holds a weak ref); discard it when done.
+    task = asyncio.create_task(_bg_anakin_scrape(ticker))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
 
     # 3. Pre-warm yfinance (fast, ~2 sec) so wire_calls reuse cache
     await get_yfinance_data(ticker)

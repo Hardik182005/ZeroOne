@@ -9,10 +9,16 @@ import re
 import httpx
 from typing import Optional
 
-ANAKIN_IO_KEY  = os.getenv("ANAKIN_API_KEY", "")
+from utils.env import clean_env
+ANAKIN_IO_KEY  = clean_env("ANAKIN_API_KEY")
 ANAKIN_IO_BASE = "https://api.anakin.io/v1"
-POLL_INTERVAL  = 4    # seconds between polls
-MAX_POLLS      = 30   # max ~120s wait per job
+POLL_INTERVAL  = 3    # seconds between polls
+MAX_POLLS      = 35   # max ~105s wait per job (browser scrapes are slow)
+
+
+async def _noop():
+    """Awaitable that resolves to None (replaces removed asyncio.coroutine)."""
+    return None
 
 
 def _headers():
@@ -42,12 +48,19 @@ async def _submit(client: httpx.AsyncClient, url: str, use_browser: bool = True)
 
 async def _poll(client: httpx.AsyncClient, job_id: str) -> Optional[dict]:
     """Poll until job completes. Returns full result dict or None."""
-    for _ in range(MAX_POLLS):
+    last_status = ""
+    for i in range(MAX_POLLS):
         await asyncio.sleep(POLL_INTERVAL)
         try:
             r = await client.get(f"{ANAKIN_IO_BASE}/url-scraper/{job_id}", headers=_headers(), timeout=15.0)
+            if r.status_code != 200:
+                print(f"[anakin.io] poll {job_id} → HTTP {r.status_code}: {r.text[:120]}")
+                continue
             d = r.json()
             status = d.get("status", "")
+            if status != last_status:
+                print(f"[anakin.io] job {job_id} status: {status or '(none)'} (poll {i+1})")
+                last_status = status
             if status == "completed":
                 return d
             if status == "failed":
@@ -55,7 +68,7 @@ async def _poll(client: httpx.AsyncClient, job_id: str) -> Optional[dict]:
                 return None
         except Exception as e:
             print(f"[anakin.io] poll error: {e}")
-    print(f"[anakin.io] job {job_id} timed out")
+    print(f"[anakin.io] job {job_id} timed out after ~{MAX_POLLS * POLL_INTERVAL}s (last status: {last_status or 'none'})")
     return None
 
 
@@ -282,10 +295,12 @@ async def fetch_all_anakin(ticker: str) -> dict:
 
         # Poll all in parallel
         results = await asyncio.gather(
-            _poll(client, screener_jid) if screener_jid else asyncio.coroutine(lambda: None)(),
-            _poll(client, et_jid)       if et_jid       else asyncio.coroutine(lambda: None)(),
-            _poll(client, mc_jid)       if mc_jid       else asyncio.coroutine(lambda: None)(),
+            _poll(client, screener_jid) if screener_jid else _noop(),
+            _poll(client, et_jid)       if et_jid       else _noop(),
+            _poll(client, mc_jid)       if mc_jid       else _noop(),
+            return_exceptions=True,
         )
+        results = [None if isinstance(r, Exception) else r for r in results]
 
     screener_raw, et_raw, mc_raw = results
 

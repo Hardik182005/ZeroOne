@@ -3,8 +3,19 @@ import json
 import re
 from openai import AsyncOpenAI
 
-GROQ_API_KEY  = os.getenv("GROQ_API_KEY", "")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+def _clean_key(name: str) -> str:
+    """Read an env var and strip a UTF-8 BOM (U+FEFF) and surrounding whitespace.
+
+    Secrets uploaded via PowerShell often carry a BOM and/or trailing newline.
+    str.strip() does NOT remove U+FEFF, so removing it explicitly is required —
+    otherwise the key triggers gRPC "Illegal header value" / ascii-codec errors.
+    """
+    return os.getenv(name, "").replace("﻿", "").strip()
+
+
+GROQ_API_KEY  = _clean_key("GROQ_API_KEY")
+OPENAI_API_KEY = _clean_key("OPENAI_API_KEY")
 
 def is_groq_mock():
     return not GROQ_API_KEY or GROQ_API_KEY.startswith("your_")

@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -7,7 +8,10 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# clean_env is critical: a BOM/newline in the secret makes gRPC reject the auth
+# metadata ("Illegal header value") and flood the logs / burn CPU.
+from utils.env import clean_env
+GEMINI_API_KEY = clean_env("GEMINI_API_KEY")
 
 # Initialize GenAI if key is present
 if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("your_"):
@@ -53,7 +57,9 @@ async def get_gemini_verdict(ticker: str, data: dict) -> dict:
     prompt = build_prompt(ticker, data)
     
     try:
-        response = model.generate_content(prompt)
+        # generate_content is blocking (sync gRPC) — run off the event loop
+        # so it can't wedge the async server.
+        response = await asyncio.to_thread(model.generate_content, prompt)
         return parse_verdict_response(response.text)
     except Exception as e:
         print(f"[GEMINI API ERROR] {e}. Returning mock verdict.")
@@ -77,7 +83,7 @@ async def generate_pdf_report(ticker: str, full_data: dict) -> bytes:
             Format as structured text with clear section headers.
             Include ZeroOne branding. Add disclaimer footer.
             """
-            response = model.generate_content(report_prompt)
+            response = await asyncio.to_thread(model.generate_content, report_prompt)
             report_text = response.text
         except Exception as e:
             print(f"[GEMINI PDF TEXT GEN FAILED] {e}. Using static template.")
