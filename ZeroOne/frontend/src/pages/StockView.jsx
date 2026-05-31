@@ -113,6 +113,105 @@ const generateMockStockData = (sym) => ({
   }
 });
 
+function computeStockArchetype(data) {
+  const pe       = parseFloat(data?.fundamentals?.pe) || 30;
+  const roe      = parseFloat(data?.fundamentals?.roe) || 15;
+  const roce     = parseFloat(data?.fundamentals?.roce) || 15;
+  const de       = parseFloat(data?.fundamentals?.de) || 0.5;
+  const ivPct    = parseFloat(data?.options?.iv_percentile) || 40;
+  const bullRatio= parseFloat(data?.sentiment?.bull_ratio) || 50;
+  const fgScore  = parseFloat(data?.sentiment?.fg_score) || 50;
+  const changePct= Math.abs(parseFloat(data?.quote?.change_pct) || 0);
+  const pledgePct= parseFloat(String(data?.promoter?.pledge_pct || "0").replace('%','')) || 0;
+
+  const scores = {
+    qualityCompounder:
+      (roe > 18 ? 3 : roe > 12 ? 1 : 0) +
+      (roce > 18 ? 3 : roce > 12 ? 1 : 0) +
+      (de < 0.3 ? 3 : de < 0.7 ? 1 : 0) +
+      (pledgePct < 5 ? 2 : 0) + (pe > 0 && pe < 35 ? 1 : 0),
+    momentumBeast:
+      (bullRatio > 70 ? 3 : bullRatio > 55 ? 1 : 0) +
+      (fgScore > 65 ? 3 : fgScore > 50 ? 1 : 0) +
+      (changePct > 2 ? 2 : changePct > 0.5 ? 1 : 0),
+    volatilityEngine:
+      (ivPct > 65 ? 3 : ivPct > 50 ? 1 : 0) +
+      (changePct > 3 ? 3 : changePct > 1.5 ? 1 : 0) + (de > 0.8 ? 1 : 0),
+    valueVault:
+      (pe > 0 && pe < 12 ? 4 : pe > 0 && pe < 20 ? 2 : 0) +
+      (roe > 10 ? 1 : 0) + (de < 0.5 ? 1 : 0) + (bullRatio < 55 ? 1 : 0),
+    institutionalFortress:
+      (pledgePct < 3 ? 2 : 0) + (de < 0.4 ? 2 : 0) +
+      (roe > 12 ? 1 : 0) + (fgScore > 40 && fgScore < 65 ? 2 : 0),
+    sentimentReactor:
+      (bullRatio > 80 ? 4 : bullRatio > 70 ? 2 : 0) +
+      (ivPct > 55 ? 2 : 0) + (changePct > 2 ? 2 : 0) + (fgScore > 70 ? 2 : 0),
+  };
+
+  const maxPossible = { qualityCompounder: 13, momentumBeast: 8, volatilityEngine: 7, valueVault: 8, institutionalFortress: 7, sentimentReactor: 10 };
+  const [archetypeKey, topScore] = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  const confidence = Math.min(95, Math.max(42, Math.round((topScore / maxPossible[archetypeKey]) * 100)));
+
+  const ARCHETYPES = {
+    qualityCompounder: {
+      name: "Quality Compounder", emoji: "💎", tagline: "The wealth-building machine",
+      color: "#059669", bg: "#f0fdf4",
+      description: "This stock consistently earns high returns on equity with minimal debt. Management is disciplined, earnings are predictable, and value compounds for shareholders year after year. The hallmark of a long-term wealth machine.",
+      bestFor: "Long-term SIP investors & wealth builders",
+      strategy: "Buy on dips below fair value. Hold 3–5 years minimum. Ignore short-term noise — the compounding engine needs time.",
+      risk: "Trades at a premium. Any earnings miss or valuation de-rating can cause sharp corrections from elevated levels.",
+      signals: ["High ROE", "High ROCE", "Low Debt/Equity", "Low Pledge %"],
+    },
+    momentumBeast: {
+      name: "Momentum Beast", emoji: "🔥", tagline: "Rides trends with conviction",
+      color: "#ea580c", bg: "#fff7ed",
+      description: "Strong social conviction, elevated Fear & Greed readings, and decisive price action. This stock rewards trend-followers who get in early and exit before the crowd turns. Momentum is the edge here.",
+      bestFor: "Swing traders & momentum strategy funds",
+      strategy: "Enter on confirmed breakouts above key resistance with volume confirmation. Use 3–5% trailing stop-loss aggressively.",
+      risk: "When momentum reverses, it reverses hard and fast. No support when sentiment flips — exits must be disciplined.",
+      signals: ["High Bull Ratio", "Greed Zone F&G", "Strong Price Action", "Rising Volume"],
+    },
+    volatilityEngine: {
+      name: "Volatility Engine", emoji: "⚡", tagline: "High octane — both directions",
+      color: "#d97706", bg: "#fffbeb",
+      description: "Elevated implied volatility and wide intraday swings make this stock a double-edged sword. Big moves happen — knowing which direction requires timing and confirmed catalysts. Not for the faint-hearted.",
+      bestFor: "Options traders & short-term speculators",
+      strategy: "Sell premium via iron condors or straddles when IV is high. Avoid naked directional bets unless catalysts are clear.",
+      risk: "Whipsaws destroy stop-losses. News events can gap through support/resistance in seconds.",
+      signals: ["High IV Percentile", "Wide Daily Range", "Elevated Volatility", "Active Options Chain"],
+    },
+    valueVault: {
+      name: "Value Vault", emoji: "🏛️", tagline: "Hidden gem, patient reward",
+      color: "#2563eb", bg: "#eff6ff",
+      description: "Trading at a discount to intrinsic value with solid underlying fundamentals. The market hasn't fully recognized the story yet. Patient investors who understand the thesis often win handsomely here.",
+      bestFor: "Value investors & contrarian long-term buyers",
+      strategy: "Accumulate quietly across multiple tranches. Wait for a catalyst: earnings beat, analyst re-rating, or sector rotation.",
+      risk: "Value traps are real — always verify WHY it's cheap. Could stay undervalued for years without a catalyst.",
+      signals: ["Low P/E Ratio", "Solid ROE", "Under-Radar Sentiment", "Clean Balance Sheet"],
+    },
+    institutionalFortress: {
+      name: "Institutional Fortress", emoji: "🏦", tagline: "Smart money's trusted anchor",
+      color: "#4f46e5", bg: "#eef2ff",
+      description: "Institutions have done their homework here. Low pledge, clean balance sheet, stable promoter holding. FII/DII flows support this stock at key levels, acting as natural shock absorbers during corrections.",
+      bestFor: "Conservative investors focused on wealth preservation",
+      strategy: "Add on institutional buying confirmation via bulk deals. Use market dips aligned with FII buying windows as entry points.",
+      risk: "Slow mover. Requires patience. Opportunity cost is real during high-growth phases.",
+      signals: ["Zero/Low Pledge", "Low Debt", "Stable Promoter Holding", "Balanced Sentiment"],
+    },
+    sentimentReactor: {
+      name: "Sentiment Reactor", emoji: "📡", tagline: "Moves on whispers and momentum",
+      color: "#9333ea", bg: "#faf5ff",
+      description: "Extreme social media buzz and high retail participation drive this stock. It can move 5%+ on a single news headline. Speed and agility are non-negotiable for trading this archetype profitably.",
+      bestFor: "News traders & event-driven speculators",
+      strategy: "Monitor real-time news feeds obsessively. Front-run catalysts. Cut positions quickly — no loyalty to any price level.",
+      risk: "FOMO-driven moves reverse violently and without warning. The last buyers are the first ones hurt.",
+      signals: ["Very High Bull Ratio", "Extreme F&G Score", "High Social Buzz", "High IV"],
+    },
+  };
+
+  return { ...ARCHETYPES[archetypeKey], confidence, archetypeKey };
+}
+
 export default function StockView() {
   const { ticker } = useParams();
   const navigate = useNavigate();
@@ -338,6 +437,61 @@ export default function StockView() {
           </div>
         </div>
       </div>
+
+      {/* STOCK DNA — BEHAVIOURAL ARCHETYPE */}
+      {(() => {
+        const arch = computeStockArchetype(data);
+        return (
+          <div className="mb-8 rounded-2xl overflow-hidden border border-[#e8e4f0]" style={{ background: arch.bg }}>
+            <div className="px-6 py-3 flex items-center justify-between" style={{ background: arch.color + '18' }}>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]" style={{ color: arch.color, fontVariationSettings: "'FILL' 1" }}>genetics</span>
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: arch.color }}>STOCK DNA — BEHAVIOURAL ARCHETYPE</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold text-white" style={{ background: arch.color }}>EXCLUSIVE TO ZEROONE</span>
+            </div>
+            <div className="p-6">
+              <div className="flex items-start gap-5 mb-5">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shrink-0 shadow-sm" style={{ background: arch.color + '20', border: `2px solid ${arch.color}30` }}>
+                  {arch.emoji}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-[22px] font-bold mb-1" style={{ color: arch.color }}>{arch.name}</h2>
+                  <p className="text-[13px] italic mb-3" style={{ color: arch.color + 'bb' }}>{arch.tagline}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider shrink-0">AI Confidence</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${arch.confidence}%`, background: arch.color }} />
+                    </div>
+                    <span className="text-[11px] font-bold shrink-0" style={{ color: arch.color }}>{arch.confidence}%</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[13px] text-[#3d3a4a] leading-relaxed mb-5">{arch.description}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div className="bg-white/70 rounded-xl p-4 border border-white/80">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: arch.color }}>Best Played By</p>
+                  <p className="text-[13px] text-[#0d0d0d] font-medium">{arch.bestFor}</p>
+                </div>
+                <div className="bg-white/70 rounded-xl p-4 border border-white/80">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: arch.color }}>Entry Strategy</p>
+                  <p className="text-[13px] text-[#0d0d0d]">{arch.strategy}</p>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: '#fee2e240', border: '1px solid #fee2e2' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-2">Core Risk</p>
+                  <p className="text-[13px] text-[#0d0d0d]">{arch.risk}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Why this archetype:</span>
+                {arch.signals.map(s => (
+                  <span key={s} className="px-3 py-1 rounded-full text-[11px] font-semibold" style={{ background: arch.color + '20', color: arch.color }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">

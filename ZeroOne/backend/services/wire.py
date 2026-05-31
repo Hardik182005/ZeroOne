@@ -40,6 +40,35 @@ def _get_headers():
 # Module-level alias kept for any external code that may reference HEADERS
 HEADERS = _get_headers()
 
+async def get_real_nse_price(ticker: str) -> dict:
+    """Fetch live NSE price via yfinance — no API key required."""
+    try:
+        import yfinance as yf
+        import asyncio
+        loop = asyncio.get_event_loop()
+        stock = await loop.run_in_executor(None, lambda: yf.Ticker(f"{ticker}.NS"))
+        fi = await loop.run_in_executor(None, lambda: stock.fast_info)
+        price = round(float(fi.last_price), 2)
+        prev  = round(float(fi.previous_close), 2)
+        chg   = round(price - prev, 2)
+        chg_p = round((chg / prev) * 100, 2) if prev else 0.0
+        mkt_cap = getattr(fi, 'market_cap', None) or 0
+        avg_vol = getattr(fi, 'three_month_average_volume', None) or 0
+        yr_high = getattr(fi, 'year_high', None)
+        yr_low  = getattr(fi, 'year_low', None)
+        return {
+            "price":       price,
+            "change":      chg,
+            "change_pct":  chg_p,
+            "volume":      f"{avg_vol/1e6:.1f}M" if avg_vol else "N/A",
+            "market_cap":  f"₹{mkt_cap/1e12:.2f}T" if mkt_cap else "N/A",
+            "week52_high": round(float(yr_high), 2) if yr_high else 0.0,
+            "week52_low":  round(float(yr_low),  2) if yr_low  else 0.0,
+        }
+    except Exception as e:
+        print(f"[yfinance] {ticker}: {e}")
+        return {}
+
 # Dynamic mock data generators for each connector + action
 def get_mock_data(connector: str, action: str, params: dict):
     symbol = params.get("symbol", "RELIANCE").upper()
@@ -184,6 +213,14 @@ def get_mock_data(connector: str, action: str, params: dict):
     return {}
 
 async def wire_call(connector: str, action: str, params: dict):
+    # Real NSE price via yfinance — overrides mock price for quote calls
+    if connector == "nse-india" and action == "get_quote":
+        mock = get_mock_data(connector, action, params)
+        real = await get_real_nse_price(params.get("symbol", ""))
+        if real:
+            return {**mock, **real}
+        return mock
+
     if is_mock_mode():
         # Artificial delay to mimic API call
         await asyncio.sleep(0.05)
