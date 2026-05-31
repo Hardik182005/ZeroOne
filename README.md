@@ -5,8 +5,8 @@
 
 **The market speaks. We translate.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-6434ed?style=for-the-badge&logo=google-cloud&logoColor=white)](https://zeroonone-3692981377.asia-south1.run.app)
-[![Cloud Run](https://img.shields.io/badge/Deployed%20on-Cloud%20Run%20Mumbai-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://zeroonone-3692981377.asia-south1.run.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-6434ed?style=for-the-badge&logo=google-cloud&logoColor=white)](https://zeroone-in.web.app)
+[![Cloud Run](https://img.shields.io/badge/Deployed%20on-Cloud%20Run%20Mumbai-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://zeroone-3692981377.asia-south1.run.app)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/Frontend-React%2018-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
@@ -22,7 +22,7 @@ ZeroOne is a real-time stock intelligence terminal for Indian retail investors. 
 
 Built for the **Anakin Wire Buildathon 2026**.
 
-**Live:** https://zeroonone-3692981377.asia-south1.run.app
+**Live:** https://zeroone-in.web.app  (also served from Cloud Run: https://zeroone-3692981377.asia-south1.run.app)
 
 ---
 
@@ -35,10 +35,11 @@ Built for the **Anakin Wire Buildathon 2026**.
 | Options Pulse | Live PCR, Max Pain, IV percentile, OI strikes |
 | Promoter Intel | Holding %, pledging %, insider trades, bulk deals |
 | Sector Rotation | FII/DII net flow heatmap with clickable tiles |
-| Stock Compare | GPT-4o-mini head-to-head comparison with decisive winner |
+| Stock Compare | Head-to-head on real fundamentals — winners per category (Valuation, ROE, Scale/M-Cap, Risk) computed from live numbers, decisive overall verdict |
 | Voice Narration | ElevenLabs TTS reads your analysis aloud |
 | PDF Reports | Gemini Flash generates full equity research PDFs |
-| AI Assistant | GPT-4o-mini chat, no markdown formatting |
+| AI Assistant | Page-aware chat (knows the stock you're viewing) with two-way voice — speaks replies + mic input; available as a full page and a floating orb on every screen |
+| Real-Time Ticker | Live SSE stream pushes index + mover prices every ~12s (polling fallback) |
 | Smart Caching | Redis (30 min) + localStorage (30 min) = Anakin credits preserved |
 
 ---
@@ -64,9 +65,11 @@ GET  /api/health
 POST /api/stock/{ticker}         Full analysis (cached 30 min)
 GET  /api/sectors                Sector rotation + FII/DII
 GET  /api/ticker-tape            Live ticker bar
+GET  /api/ticker-tape/stream     Live SSE ticker stream (real-time)
 GET  /api/ticker-tape/movers     Gainers + losers
-POST /api/compare                GPT-4o stock comparison
+POST /api/compare                Real-data stock comparison
 POST /api/voice/{ticker}         ElevenLabs voice narration
+POST /api/voice/speak            ElevenLabs TTS for chat replies
 GET  /api/pdf/{ticker}           PDF report download
 POST /api/briefing               Morning audio briefing
 GET  /api/marketpulse            Narratives + sentiment chart
@@ -100,13 +103,17 @@ npm run dev            # http://localhost:5173 (proxies /api to :8080)
 Single command from project root:
 
 ```bash
-gcloud run deploy zeroonone \
+gcloud run deploy zeroone \
   --source . \
   --region asia-south1 \
   --allow-unauthenticated \
   --memory 1Gi \
-  --timeout 120
+  --min-instances 1 \
+  --no-cpu-throttling \
+  --timeout 3600
 ```
+
+`--no-cpu-throttling` keeps CPU allocated so background Anakin scrapes finish; `--min-instances 1` keeps the SSE live-ticker stream warm.
 
 The root `Dockerfile` is multi-stage: Node 20 builds the frontend, Python 3.11 serves both via FastAPI StaticFiles.
 
