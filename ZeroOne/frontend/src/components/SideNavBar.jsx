@@ -18,7 +18,7 @@ export default function SideNavBar() {
   const [prefs, setPrefs] = useState({ name: "User", email: "" });
 
   useEffect(() => {
-    api.getMarketStatus().then(d => setMarketStatus(d)).catch(() => {});
+    api.getMarketStatus().then(d => { if (d) setMarketStatus(d); }).catch(() => {});
     try {
       const p = JSON.parse(localStorage.getItem("zo_prefs") || "{}");
       if (p.name || p.email) setPrefs({ name: p.name || "User", email: p.email || "" });

@@ -110,7 +110,9 @@ export const api = {
   },
 
   getSectors: () =>
-    fetch(`${API_BASE}/api/sectors`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API_BASE}/api/sectors`)
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null),
 
   compareStocks: (ticker1, ticker2) =>
     fetch(`${API_BASE}/api/compare`, {
@@ -143,13 +145,17 @@ export const api = {
       }),
 
   getTickerTape: () =>
-    fetch(`${API_BASE}/api/ticker-tape`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API_BASE}/api/ticker-tape`).then(r => r.ok ? r.json() : []).catch(() => []),
 
   getMarketMovers: () =>
-    fetch(`${API_BASE}/api/ticker-tape/movers`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API_BASE}/api/ticker-tape/movers`)
+      .then(r => r.ok ? r.json() : { gainers: [], losers: [] })
+      .catch(() => ({ gainers: [], losers: [] })),
 
   getMarketStatus: () =>
-    fetch(`${API_BASE}/api/market-status`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API_BASE}/api/market-status`)
+      .then(r => r.ok ? r.json() : { is_open: false, session: "closed" })
+      .catch(() => ({ is_open: false, session: "closed" })),
 
   chat: (message, context = "") =>
     fetch(`${API_BASE}/api/chat`, {
@@ -159,10 +165,14 @@ export const api = {
     }).then(r => r.json()).catch(() => ({ reply: "AI assistant unavailable — backend offline." })),
 
   getMarketPulse: () =>
-    fetch(`${API_BASE}/api/marketpulse`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API_BASE}/api/marketpulse`)
+      .then(r => r.ok ? r.json() : { narratives: [], fear_greed: { fg_score: 50, fg_label: "Neutral" }, sentiment_history: [], trending_symbols: [], fii_dii: {} })
+      .catch(() => ({ narratives: [], fear_greed: { fg_score: 50, fg_label: "Neutral" }, sentiment_history: [], trending_symbols: [], fii_dii: {} })),
 
   getMarketPulseSnapshots: () =>
-    fetch(`${API_BASE}/api/marketpulse/snapshots`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${API_BASE}/api/marketpulse/snapshots`)
+      .then(r => r.ok ? r.json() : { snapshots: [] })
+      .catch(() => ({ snapshots: [] })),
 
   triggerMarketPulseSnapshot: () =>
     fetch(`${API_BASE}/api/marketpulse/snapshot`, { method: "POST" })
