@@ -316,32 +316,42 @@ async def wire_call(connector: str, action: str, params: dict):
         anakin = await _anakin_call(connector, action, params)
         return anakin or get_mock_data(connector, action, params)
 
-    # ── Fundamentals: yfinance ────────────────────────────────────────────────
+    # ── Fundamentals: anakin.io (Screener) → yfinance → mock ─────────────────
     if connector == "screener-in" and action == "get_fundamentals":
+        # Check anakin.io cache first (populated by fetch_all_stock_data)
+        if "__anakin_fundamentals__" in _yf_cache:
+            return _yf_cache["__anakin_fundamentals__"]
         yf = await get_yfinance_data(symbol) if symbol else {}
         fd = yf.get("fundamentals", {})
         if fd and fd.get("pe") != "N/A":
             return fd
-        anakin = await _anakin_call(connector, action, params)
-        return anakin or get_mock_data(connector, action, params)
+        return get_mock_data(connector, action, params)
 
-    # ── News: yfinance ────────────────────────────────────────────────────────
+    # ── News: anakin.io (ET) → yfinance → mock ───────────────────────────────
     if connector == "economic-times" and action == "search_articles":
+        if "__anakin_news__" in _yf_cache:
+            return _yf_cache["__anakin_news__"]
         yf = await get_yfinance_data(symbol) if symbol else {}
         news = yf.get("news", [])
         if news:
             return news
-        anakin = await _anakin_call(connector, action, params)
-        return anakin or get_mock_data(connector, action, params)
+        return get_mock_data(connector, action, params)
 
-    # ── Shareholding: yfinance ────────────────────────────────────────────────
+    # ── Shareholding: anakin.io (Screener) → yfinance → mock ─────────────────
     if connector == "bse-india" and action == "get_shareholding":
+        if "__anakin_shareholding__" in _yf_cache:
+            return _yf_cache["__anakin_shareholding__"]
         yf = await get_yfinance_data(symbol) if symbol else {}
         sh = yf.get("shareholding", {})
         if sh and sh.get("promoter_pct") is not None:
             return sh
-        anakin = await _anakin_call(connector, action, params)
-        return anakin or get_mock_data(connector, action, params)
+        return get_mock_data(connector, action, params)
+
+    # ── Analyst consensus: anakin.io (Moneycontrol) → mock ───────────────────
+    if connector == "moneycontrol" and action == "get_analyst_consensus":
+        if "__anakin_consensus__" in _yf_cache:
+            return _yf_cache["__anakin_consensus__"]
+        return get_mock_data(connector, action, params)
 
     # ── Fear & Greed: free alternative.me API ────────────────────────────────
     if connector == "fear-greed-index" and action == "get_current":
@@ -364,9 +374,26 @@ async def wire_call(connector: str, action: str, params: dict):
 
 # ── Batch fetchers ─────────────────────────────────────────────────────────────
 async def fetch_all_stock_data(ticker: str, company_name: str):
-    # Pre-warm yfinance cache so all subsequent wire_calls reuse it
-    await get_yfinance_data(ticker)
-    _yf_cache.clear()  # reset after this request completes later
+    # ── Fire anakin.io scraping jobs + yfinance in parallel ──────────────────
+    from services.anakin_io import fetch_all_anakin
+    anakin_task = asyncio.create_task(fetch_all_anakin(ticker))
+    yf_task     = asyncio.create_task(get_yfinance_data(ticker))
+
+    anakin_data, _ = await asyncio.gather(anakin_task, yf_task, return_exceptions=True)
+    if isinstance(anakin_data, Exception):
+        anakin_data = {}
+
+    # Inject anakin.io results into cache so wire_call picks them up
+    if anakin_data:
+        screener = anakin_data.get("screener", {})
+        if screener.get("fundamentals"):
+            _yf_cache["__anakin_fundamentals__"] = screener["fundamentals"]
+        if screener.get("shareholding"):
+            _yf_cache["__anakin_shareholding__"] = screener["shareholding"]
+        if anakin_data.get("news"):
+            _yf_cache["__anakin_news__"] = anakin_data["news"]
+        if anakin_data.get("consensus"):
+            _yf_cache["__anakin_consensus__"] = anakin_data["consensus"]
 
     results = await asyncio.gather(
         wire_call("nse-india",        "get_quote",              {"symbol": ticker}),
