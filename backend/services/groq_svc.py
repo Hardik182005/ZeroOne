@@ -88,26 +88,38 @@ Plain English only. Indian Rupee context. Be direct.
 
 
 async def get_groq_verdict(ticker: str, data: dict) -> dict:
-    if is_groq_mock():
-        from services.gemini import get_mock_verdict_fallback
-        return get_mock_verdict_fallback()
-    try:
-        response = await get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are ZeroOne, an expert Indian equity analyst. Return ONLY valid JSON, no markdown, no preamble."},
-                {"role": "user", "content": build_prompt(ticker, data)}
-            ],
-            max_tokens=600,
-            temperature=0.3,
-        )
-        content = response.choices[0].message.content.strip()
-        content = re.sub(r'```json|```', '', content).strip()
-        return json.loads(content)
-    except Exception as e:
-        print(f"[GROQ VERDICT ERROR] {e}")
-        from services.gemini import get_mock_verdict_fallback
-        return get_mock_verdict_fallback()
+    prompt = build_prompt(ticker, data)
+    sys_msg = "You are ZeroOne, an expert Indian equity analyst. Return ONLY valid JSON, no markdown, no preamble."
+
+    # 1. Try Groq (llama-3.3-70b — fastest)
+    if not is_groq_mock():
+        try:
+            r = await get_groq_client().chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": prompt}],
+                max_tokens=600, temperature=0.3,
+            )
+            content = re.sub(r'```json|```', '', r.choices[0].message.content.strip()).strip()
+            return json.loads(content)
+        except Exception as e:
+            print(f"[GROQ] failed: {e} — trying OpenAI fallback")
+
+    # 2. Try OpenAI gpt-4o-mini
+    if not is_openai_mock():
+        try:
+            r = await get_openai_client().chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": prompt}],
+                max_tokens=600, temperature=0.3,
+            )
+            content = re.sub(r'```json|```', '', r.choices[0].message.content.strip()).strip()
+            return json.loads(content)
+        except Exception as e:
+            print(f"[OPENAI] failed: {e} — using mock fallback")
+
+    # 3. Mock fallback
+    from services.gemini import get_mock_verdict_fallback
+    return get_mock_verdict_fallback()
 
 
 async def get_groq_comparison(ticker1: str, data1: dict, ticker2: str, data2: dict) -> dict:
