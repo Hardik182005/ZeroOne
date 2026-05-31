@@ -49,8 +49,8 @@ async def get_gemini_verdict(ticker: str, data: dict) -> dict:
         print("[GEMINI] Mock Mode: No valid API key set. Returning mock verdict.")
         return get_mock_verdict_fallback()
         
-    from services.claude import build_claude_prompt as build_grok_prompt
-    prompt = build_grok_prompt(ticker, data)
+    from services.groq_svc import build_prompt
+    prompt = build_prompt(ticker, data)
     
     try:
         response = model.generate_content(prompt)

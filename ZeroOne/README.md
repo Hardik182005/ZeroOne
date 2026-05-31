@@ -1,60 +1,157 @@
-# ZeroOne
+<div align="center">
+
+# ⚡ ZeroOne
+### India's AI-Powered Equity Intelligence Terminal
+
 **The market speaks. We translate.**
 
-India's AI-powered equity intelligence terminal. Built for the Anakin Wire Buildathon 2026.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-6434ed?style=for-the-badge&logo=google-cloud&logoColor=white)](https://zeroonone-3692981377.asia-south1.run.app)
+[![Cloud Run](https://img.shields.io/badge/Deployed%20on-Cloud%20Run%20Mumbai-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://zeroonone-3692981377.asia-south1.run.app)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/Frontend-React%2018-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Made in India](https://img.shields.io/badge/Made%20in-India%20%F0%9F%87%AE%F0%9F%87%B3-FF9933?style=for-the-badge)](https://github.com/Hardik182005/ZeroOne)
 
-## AI Stack
-- **Primary AI**: Claude claude-sonnet-4-6 (Anthropic) — verdict, comparison, briefing
-- **Fallback AI**: Gemini 1.5 Flash (Google) — PDF reports + Claude fallback
-- **Voice**: ElevenLabs — TTS narration
-- **Data**: Anakin Wire API (7 connectors: NSE, BSE, Screener, ET, Moneycontrol, StockTwits, Trends)
-- **Cache**: Redis (5-min TTL on stock data)
+</div>
 
-## Setup
+---
 
-```bash
-# 1. Backend
-cd backend
-cp .env.example .env
-# Fill in ANTHROPIC_API_KEY, ANAKIN_API_KEY, ELEVENLABS_API_KEY, GEMINI_API_KEY
+## What is ZeroOne?
 
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+ZeroOne is a real-time stock intelligence terminal for Indian retail investors. It fuses live NSE/BSE data from 8 simultaneous Anakin Wire sources with institutional-grade AI to deliver a single, decisive verdict in plain English.
 
-# 2. Frontend (in another terminal)
-cd frontend
-npm install
-npm run dev
+Built for the **Anakin Wire Buildathon 2026**.
+
+**Live:** https://zeroonone-3692981377.asia-south1.run.app
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| AI Verdict | Groq Llama 3.3 reads 16 data points, gives BULLISH / CAUTIOUS / AVOID in plain English |
+| MarketPulse | Narrative tracker — detects story shifts across ET, Moneycontrol, StockTwits before price moves |
+| Options Pulse | Live PCR, Max Pain, IV percentile, OI strikes |
+| Promoter Intel | Holding %, pledging %, insider trades, bulk deals |
+| Sector Rotation | FII/DII net flow heatmap with clickable tiles |
+| Stock Compare | GPT-4o-mini head-to-head comparison with decisive winner |
+| Voice Narration | ElevenLabs TTS reads your analysis aloud |
+| PDF Reports | Gemini Flash generates full equity research PDFs |
+| AI Assistant | GPT-4o-mini chat, no markdown formatting |
+| Smart Caching | Redis (30 min) + localStorage (30 min) = Anakin credits preserved |
+
+---
+
+## Tech Stack
+
+```
+Frontend    React 18 + Vite + TailwindCSS + Recharts
+Backend     FastAPI + Python 3.11 + asyncio
+AI Models   Groq Llama 3.3 (verdicts) + GPT-4o-mini (chat) + Gemini Flash (PDF) + GPT-4o (compare)
+Voice       ElevenLabs eleven_multilingual_v2
+Data        Anakin Wire — 8 connectors, parallel asyncio.gather
+Cache       Redis + browser localStorage
+Deploy      Google Cloud Run, asia-south1 (Mumbai)
 ```
 
-## Docker
-```bash
-docker-compose up
-```
+---
 
 ## API Endpoints
-- `POST /api/stock/{ticker}` — Full stock analysis
-- `GET /api/sectors` — Sector rotation heatmap
-- `POST /api/compare` — Compare two stocks (Claude AI)
-- `POST /api/voice/{ticker}` — ElevenLabs voice narration
-- `GET /api/pdf/{ticker}` — PDF research report
-- `POST /api/briefing` — Morning AI briefing audio
-- `GET /api/tickers/search?q=REL` — Ticker autocomplete
-- `GET /api/ticker-tape` — Live ticker data
-- `GET /api/market-status` — NSE market open/closed status
-- `GET /api/health` — Health check
 
-## Environment Variables
-All keys in `backend/.env.example`. Claude + Anakin are the only required keys for full functionality. Everything else falls back to mock data gracefully.
+```
+GET  /api/health
+POST /api/stock/{ticker}         Full analysis (cached 30 min)
+GET  /api/sectors                Sector rotation + FII/DII
+GET  /api/ticker-tape            Live ticker bar
+GET  /api/ticker-tape/movers     Gainers + losers
+POST /api/compare                GPT-4o stock comparison
+POST /api/voice/{ticker}         ElevenLabs voice narration
+GET  /api/pdf/{ticker}           PDF report download
+POST /api/briefing               Morning audio briefing
+GET  /api/marketpulse            Narratives + sentiment chart
+GET  /api/marketpulse/snapshots  48h playback snapshots
+POST /api/chat                   GPT-4o-mini AI assistant
+GET  /api/market-status          NSE open/closed/pre-open
+GET  /api/tickers/search?q=      Ticker autocomplete
+```
 
-## Deploy to Google Cloud Run
+---
+
+## Local Development
+
 ```bash
+# Backend
 cd backend
-gcloud run deploy zeroonone-backend \
+pip install -r requirements.txt
+cp .env.example .env   # fill in API keys
+uvicorn main:app --reload --port 8080
+
+# Frontend
+cd frontend
+npm install
+npm run dev            # http://localhost:5173 (proxies /api to :8080)
+```
+
+---
+
+## Deploy
+
+Single command from project root:
+
+```bash
+gcloud run deploy zeroonone \
   --source . \
   --region asia-south1 \
   --allow-unauthenticated \
   --memory 1Gi \
-  --cpu 1 \
-  --set-env-vars ANTHROPIC_API_KEY=xxx,ANAKIN_API_KEY=xxx,GEMINI_API_KEY=xxx,ELEVENLABS_API_KEY=xxx,REDIS_URL=redis://...
+  --timeout 120
 ```
+
+The root `Dockerfile` is multi-stage: Node 20 builds the frontend, Python 3.11 serves both via FastAPI StaticFiles.
+
+---
+
+## Caching
+
+| Layer | Storage | TTL |
+|---|---|---|
+| Backend | Redis | 30 min |
+| Frontend | localStorage | 30 min |
+
+Stock data is cached both server-side and client-side. Repeated analyses of the same ticker cost zero Anakin credits within the window.
+
+---
+
+## Wire Connectors
+
+| Connector | Data |
+|---|---|
+| NSE India | Quotes, options, bulk deals, insider trades, FII/DII, gainers/losers |
+| BSE India | Corporate actions, shareholding |
+| Screener.in | Fundamentals, peers |
+| Economic Times | News, sentiment |
+| Moneycontrol | Analyst consensus, MF holdings |
+| Fear & Greed Index | Market sentiment score |
+| Google Trends | Search interest |
+| StockTwits | Social sentiment, trending symbols |
+
+---
+
+## Built By
+
+**Hardik Hinduja** — Anakin Wire Buildathon 2026
+
+> The market speaks. We translate.
+
+---
+
+<div align="center">
+
+[![Anakin Wire](https://img.shields.io/badge/Powered%20by-Anakin%20Wire-6434ed?style=flat-square)](https://anakin.ai)
+[![Groq](https://img.shields.io/badge/AI-Groq%20Llama%203.3-F55036?style=flat-square)](https://groq.com)
+[![OpenAI](https://img.shields.io/badge/AI-GPT--4o--mini-412991?style=flat-square)](https://openai.com)
+[![Gemini](https://img.shields.io/badge/AI-Gemini%20Flash-4285F4?style=flat-square)](https://ai.google.dev)
+[![ElevenLabs](https://img.shields.io/badge/Voice-ElevenLabs-000000?style=flat-square)](https://elevenlabs.io)
+
+</div>

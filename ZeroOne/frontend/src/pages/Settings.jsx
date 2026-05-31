@@ -1,247 +1,332 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const DEFAULT_PREFS = {
+  name: "",
+  email: "",
+  defaultTicker: "RELIANCE",
+  refreshInterval: "15",
+  notifications: true,
+  earningsAlerts: true,
+  priceAlerts: false,
+  voiceEnabled: false,
+  watchlist: ["RELIANCE", "INFY", "HDFCBANK", "TCS", "TATAMOTORS"],
+};
 
-const SUGGESTED_QUESTIONS = [
-  "Is RELIANCE a buy right now?",
-  "Which sectors are FIIs buying today?",
-  "Explain PCR ratio in simple terms",
-  "What is max pain in options?",
-  "Compare IT sector vs Banking sector",
-  "What does promoter pledging mean?"
-];
+function Section({ title, icon, children }) {
+  return (
+    <div className="glass-card rounded-xl card-inner-stroke overflow-hidden">
+      <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary text-lg">{icon}</span>
+        <h3 className="font-title-md text-[15px] font-semibold text-on-surface">{title}</h3>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
+
+function Toggle({ label, description, value, onChange }) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-outline-variant/20 last:border-b-0">
+      <div>
+        <p className="text-sm font-medium text-on-surface">{label}</p>
+        {description && <p className="text-xs text-on-surface-variant mt-0.5">{description}</p>}
+      </div>
+      <button
+        onClick={() => onChange(!value)}
+        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${value ? "bg-primary" : "bg-surface-container-high"}`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${value ? "translate-x-5" : "translate-x-0"}`} />
+      </button>
+    </div>
+  );
+}
 
 export default function Settings() {
-  const [messages, setMessages] = useState([
-    { role: "assistant", text: "Good morning! I'm ZeroOne AI. Ask me anything about Indian markets — stocks, sectors, options, or investing strategy. The market speaks. I translate." }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const messagesEndRef = useRef(null);
-  const recognitionRef = useRef(null);
+  const navigate = useNavigate();
+  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [saved, setSaved] = useState(false);
+  const [watchlistInput, setWatchlistInput] = useState("");
+  const [apiStatus, setApiStatus] = useState(null);
+  const [apiLoading, setApiLoading] = useState(true);
 
+  // Load saved prefs
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = async (text) => {
-    if (!text.trim() || loading) return;
-    const userMsg = { role: "user", text: text.trim() };
-    setMessages(prev => [...prev, userMsg]);
-    setInput("");
-    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim() })
-      });
-      const data = await res.json();
-      const reply = data.reply || "I couldn't process that. Try again.";
-      setMessages(prev => [...prev, { role: "assistant", text: reply }]);
-      if (voiceEnabled) speakText(reply);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: "assistant", text: "Network error. Check your connection." }]);
-    } finally {
-      setLoading(false);
-    }
+      const stored = JSON.parse(localStorage.getItem("zo_prefs") || "{}");
+      setPrefs(p => ({ ...p, ...stored }));
+    } catch { /* ignore */ }
+
+    // Check backend health
+    api.health().then(d => {
+      setApiStatus(d);
+      setApiLoading(false);
+    }).catch(() => {
+      setApiStatus(null);
+      setApiLoading(false);
+    });
+  }, []);
+
+  const set = (key, val) => setPrefs(p => ({ ...p, [key]: val }));
+
+  const saveAll = () => {
+    try {
+      localStorage.setItem("zo_prefs", JSON.stringify(prefs));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch { /* ignore */ }
   };
 
-  const speakText = (text) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text.substring(0, 500));
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
+  const addToWatchlist = () => {
+    const sym = watchlistInput.trim().toUpperCase();
+    if (!sym || prefs.watchlist.includes(sym)) { setWatchlistInput(""); return; }
+    set("watchlist", [...prefs.watchlist, sym]);
+    setWatchlistInput("");
   };
 
-  const startVoiceInput = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Voice input not supported in this browser. Use Chrome.");
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-IN";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-    recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      sendMessage(transcript);
-    };
-    recognition.onerror = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
+  const removeFromWatchlist = (sym) => {
+    set("watchlist", prefs.watchlist.filter(s => s !== sym));
   };
 
-  const stopListening = () => {
-    recognitionRef.current?.stop();
-    setIsListening(false);
+  const clearHistory = () => {
+    localStorage.removeItem("zo_recent_analyses");
   };
+
+  const nameInitial = prefs.name ? prefs.name.charAt(0).toUpperCase() : "Z";
 
   return (
-    <div className="p-gutter max-w-container-max mx-auto w-full">
-      {/* Page Header */}
-      <div className="mb-8 glass-card p-6 rounded-xl card-inner-stroke">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary text-3xl">smart_toy</span>
+    <div className="p-gutter max-w-container-max mx-auto w-full space-y-6">
+
+      {/* ── Header ── */}
+      <div className="glass-card rounded-xl p-6 card-inner-stroke flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white font-bold text-2xl shrink-0">
+            {nameInitial}
+          </div>
           <div>
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">ZeroOne AI Assistant</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant">Ask anything about Indian markets. Voice-enabled.</p>
+            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Settings</h2>
+            <p className="font-body-md text-body-md text-on-surface-variant">
+              {prefs.name || "Your Name"} · {prefs.email || "your@email.com"}
+            </p>
           </div>
         </div>
+        <button
+          onClick={saveAll}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-label-caps text-sm font-bold transition-all ${
+            saved
+              ? "bg-tertiary text-white"
+              : "bg-primary text-white hover:opacity-90"
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">{saved ? "check_circle" : "save"}</span>
+          {saved ? "Saved!" : "Save Changes"}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-        {/* Chat Interface */}
-        <div className="lg:col-span-8 flex flex-col gap-gutter">
-          {/* Messages */}
-          <div className="glass-card rounded-xl card-inner-stroke flex flex-col" style={{ height: "60vh" }}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-                <span className="font-label-caps text-label-caps text-on-surface-variant">ZERØONE AI — POWERED BY GROQ</span>
-              </div>
-              <button
-                onClick={() => { setVoiceEnabled(v => !v); if (isSpeaking) window.speechSynthesis?.cancel(); }}
-                className={`flex items-center gap-1 px-3 py-1 rounded font-label-caps text-xs transition-colors ${voiceEnabled ? "bg-primary text-white" : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"}`}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* ── Profile ── */}
+        <Section title="Profile" icon="person">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-label-caps text-on-surface-variant mb-1.5">Display Name</label>
+              <input
+                value={prefs.name}
+                onChange={e => set("name", e.target.value)}
+                placeholder="Your Name"
+                className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-label-caps text-on-surface-variant mb-1.5">Email Address</label>
+              <input
+                value={prefs.email}
+                onChange={e => set("email", e.target.value)}
+                placeholder="your@email.com"
+                type="email"
+                className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-label-caps text-on-surface-variant mb-1.5">Default Ticker</label>
+              <input
+                value={prefs.defaultTicker}
+                onChange={e => set("defaultTicker", e.target.value.toUpperCase())}
+                placeholder="RELIANCE"
+                className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-sm font-data-mono text-on-surface focus:outline-none focus:border-primary transition-colors"
+              />
+              <p className="text-xs text-on-surface-variant mt-1">Opens when you click Stock Intelligence in the nav</p>
+            </div>
+          </div>
+        </Section>
+
+        {/* ── Notifications & Alerts ── */}
+        <Section title="Notifications & Alerts" icon="notifications">
+          <div>
+            <Toggle
+              label="Push Notifications"
+              description="Get alerts for major market moves"
+              value={prefs.notifications}
+              onChange={v => set("notifications", v)}
+            />
+            <Toggle
+              label="Earnings Radar Alerts"
+              description="Alert when a watched stock reports in 72h"
+              value={prefs.earningsAlerts}
+              onChange={v => set("earningsAlerts", v)}
+            />
+            <Toggle
+              label="Price Movement Alerts"
+              description="Alert on ±5% intraday moves"
+              value={prefs.priceAlerts}
+              onChange={v => set("priceAlerts", v)}
+            />
+            <Toggle
+              label="AI Voice Narration"
+              description="Enable ElevenLabs voice on stock reports"
+              value={prefs.voiceEnabled}
+              onChange={v => set("voiceEnabled", v)}
+            />
+          </div>
+        </Section>
+
+        {/* ── Data Preferences ── */}
+        <Section title="Data Preferences" icon="tune">
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-label-caps text-on-surface-variant mb-1.5">MarketPulse Refresh Interval</label>
+              <select
+                value={prefs.refreshInterval}
+                onChange={e => set("refreshInterval", e.target.value)}
+                className="w-full bg-surface-container border border-outline-variant rounded-lg px-4 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-colors"
               >
-                <span className="material-symbols-outlined text-sm">{voiceEnabled ? "volume_up" : "volume_off"}</span>
-                {voiceEnabled ? "Voice ON" : "Voice OFF"}
+                <option value="5">Every 5 minutes</option>
+                <option value="15">Every 15 minutes (default)</option>
+                <option value="30">Every 30 minutes</option>
+                <option value="60">Every hour</option>
+              </select>
+            </div>
+            <div className="pt-2 border-t border-outline-variant/30">
+              <p className="text-sm font-medium text-on-surface mb-1">Browser History</p>
+              <p className="text-xs text-on-surface-variant mb-3">Stores your recently analysed stocks locally in this browser.</p>
+              <button
+                onClick={clearHistory}
+                className="px-4 py-2 bg-error/10 text-error border border-error/20 rounded-lg text-xs font-label-caps hover:bg-error/20 transition-colors"
+              >
+                Clear Recent Analyses
               </button>
             </div>
+          </div>
+        </Section>
 
-            {/* Message List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-primary text-sm">auto_awesome</span>
-                    </div>
-                  )}
-                  <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-primary text-white rounded-br-sm"
-                      : "bg-surface-container-low text-on-surface rounded-bl-sm border border-outline-variant/30"
-                  }`}>
-                    {msg.text}
-                  </div>
-                  {msg.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-secondary text-sm">person</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {loading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-primary text-sm animate-spin">sync</span>
-                  </div>
-                  <div className="bg-surface-container-low border border-outline-variant/30 px-4 py-3 rounded-xl rounded-bl-sm">
-                    <span className="font-data-mono text-xs text-on-surface-variant animate-pulse">Analyzing...</span>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
+        {/* ── Watchlist ── */}
+        <Section title="My Watchlist" icon="bookmarks">
+          <div>
+            <div className="flex gap-2 mb-4">
+              <input
+                value={watchlistInput}
+                onChange={e => setWatchlistInput(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === "Enter" && addToWatchlist()}
+                placeholder="Add ticker (e.g. WIPRO)"
+                className="flex-1 bg-surface-container border border-outline-variant rounded-lg px-4 py-2 text-sm font-data-mono text-on-surface focus:outline-none focus:border-primary transition-colors"
+              />
+              <button
+                onClick={addToWatchlist}
+                disabled={!watchlistInput.trim()}
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-label-caps disabled:opacity-40 hover:opacity-90 transition-opacity"
+              >
+                Add
+              </button>
             </div>
-
-            {/* Input Bar */}
-            <div className="p-4 border-t border-outline-variant/30">
-              <div className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
-                  placeholder="Ask about any Indian stock or market trend..."
-                  className="flex-1 bg-surface-container rounded-lg px-4 py-2.5 text-sm text-on-surface placeholder-on-surface-variant border border-outline-variant/40 focus:outline-none focus:border-primary font-body-md"
-                />
-                <button
-                  onClick={() => isListening ? stopListening() : startVoiceInput()}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${isListening ? "bg-error text-white animate-pulse" : "bg-surface-container hover:bg-surface-container-high text-on-surface-variant"}`}
-                  title={isListening ? "Stop listening" : "Voice input"}
-                >
-                  <span className="material-symbols-outlined text-lg">{isListening ? "stop" : "mic"}</span>
-                </button>
-                <button
-                  onClick={() => sendMessage(input)}
-                  disabled={!input.trim() || loading}
-                  className="w-10 h-10 rounded-lg bg-primary text-white flex items-center justify-center disabled:opacity-40 hover:opacity-90 transition-opacity"
-                >
-                  <span className="material-symbols-outlined text-lg">send</span>
-                </button>
+            {prefs.watchlist.length === 0 ? (
+              <p className="text-sm text-on-surface-variant text-center py-4">No stocks in watchlist yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {prefs.watchlist.map(sym => (
+                  <div key={sym}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container border border-outline-variant rounded-lg group"
+                  >
+                    <button
+                      onClick={() => navigate(`/stock/${sym}`)}
+                      className="font-data-mono text-sm font-bold text-on-surface hover:text-primary transition-colors"
+                    >{sym}</button>
+                    <button
+                      onClick={() => removeFromWatchlist(sym)}
+                      className="text-on-surface-variant hover:text-error transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ))}
               </div>
-              {isSpeaking && (
-                <div className="flex items-center gap-2 mt-2 text-xs text-on-surface-variant">
-                  <span className="material-symbols-outlined text-sm text-primary animate-pulse">graphic_eq</span>
-                  <span>Speaking...</span>
-                  <button onClick={() => { window.speechSynthesis?.cancel(); setIsSpeaking(false); }} className="text-primary hover:underline">Stop</button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        </div>
+        </Section>
 
-        {/* Sidebar — Suggested Questions + Info */}
-        <div className="lg:col-span-4 flex flex-col gap-gutter">
-          {/* Suggested Questions */}
-          <div className="glass-card rounded-xl p-6 card-inner-stroke">
-            <h3 className="font-title-md text-title-md text-on-surface mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary">tips_and_updates</span>
-              Suggested Questions
-            </h3>
-            <div className="space-y-2">
-              {SUGGESTED_QUESTIONS.map((q, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => sendMessage(q)}
-                  className="w-full text-left px-3 py-2.5 text-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors border border-outline-variant/30 hover:border-primary/30"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Voice Info */}
-          <div className="glass-card rounded-xl p-6 card-inner-stroke">
-            <h3 className="font-title-md text-title-md text-on-surface mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">mic</span>
-              Voice Assistant
-            </h3>
-            <p className="text-sm text-on-surface-variant mb-4">Speak your question and get a voice reply. Powered by browser speech APIs.</p>
-            <button
-              onClick={() => isListening ? stopListening() : startVoiceInput()}
-              className={`w-full py-3 rounded-lg font-label-caps text-sm font-bold flex items-center justify-center gap-2 transition-all ${isListening ? "bg-error text-white animate-pulse" : "bg-primary text-white hover:opacity-90"}`}
-            >
-              <span className="material-symbols-outlined">{isListening ? "stop_circle" : "mic"}</span>
-              {isListening ? "Listening... Tap to Stop" : "Tap to Speak"}
-            </button>
-            <p className="text-xs text-on-surface-variant mt-3 text-center">Works best in Chrome. Say any market question.</p>
-          </div>
-
-          {/* AI Stack Info */}
-          <div className="glass-card rounded-xl p-5 card-inner-stroke">
-            <h3 className="font-label-caps text-xs text-on-surface-variant mb-3">AI STACK</h3>
-            <div className="space-y-2 text-xs font-data-mono">
-              <div className="flex justify-between"><span className="text-on-surface-variant">Primary AI</span><span className="text-tertiary font-bold">Groq Llama 3.3</span></div>
-              <div className="flex justify-between"><span className="text-on-surface-variant">Compare</span><span className="text-tertiary font-bold">OpenAI GPT-4o</span></div>
-              <div className="flex justify-between"><span className="text-on-surface-variant">Voice TTS</span><span className="text-tertiary font-bold">Web Speech API</span></div>
-              <div className="flex justify-between"><span className="text-on-surface-variant">Data</span><span className="text-tertiary font-bold">Anakin Wire</span></div>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* ── System & API Status ── */}
+      <Section title="System Status" icon="monitor_heart">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* Backend */}
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`w-2 h-2 rounded-full ${apiLoading ? "bg-yellow-500 animate-pulse" : apiStatus ? "bg-tertiary" : "bg-error"}`} />
+              <span className="font-label-caps text-[10px] text-on-surface-variant">BACKEND</span>
+            </div>
+            <p className="font-data-mono text-sm text-on-surface font-bold">
+              {apiLoading ? "Checking…" : apiStatus ? "Online" : "Offline"}
+            </p>
+            <p className="text-[10px] text-on-surface-variant mt-1">FastAPI · Cloud Run</p>
+          </div>
+
+          {/* AI Stack */}
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-tertiary" />
+              <span className="font-label-caps text-[10px] text-on-surface-variant">AI ENGINE</span>
+            </div>
+            <p className="font-data-mono text-sm text-on-surface font-bold">Groq Llama 3.3</p>
+            <p className="text-[10px] text-on-surface-variant mt-1">Fallback: Gemini Flash</p>
+          </div>
+
+          {/* Data */}
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-secondary" />
+              <span className="font-label-caps text-[10px] text-on-surface-variant">DATA WIRES</span>
+            </div>
+            <p className="font-data-mono text-sm text-on-surface font-bold">8 Connectors</p>
+            <p className="text-[10px] text-on-surface-variant mt-1">NSE · BSE · Screener · ET</p>
+          </div>
+
+          {/* Voice */}
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-primary" />
+              <span className="font-label-caps text-[10px] text-on-surface-variant">VOICE TTS</span>
+            </div>
+            <p className="font-data-mono text-sm text-on-surface font-bold">ElevenLabs</p>
+            <p className="text-[10px] text-on-surface-variant mt-1">eleven_multilingual_v2</p>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-outline-variant/30 flex items-center justify-between">
+          <div className="text-xs text-on-surface-variant font-data-mono">
+            ZeroOne v1.0 · The market speaks. We translate.
+          </div>
+          <button
+            onClick={() => navigate("/assistant")}
+            className="flex items-center gap-1 text-xs text-primary hover:underline font-label-caps"
+          >
+            <span className="material-symbols-outlined text-sm">smart_toy</span>
+            Open AI Assistant
+          </button>
+        </div>
+      </Section>
+
     </div>
   );
 }

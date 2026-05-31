@@ -31,6 +31,7 @@ app.add_middleware(
 )
 
 from routers import stock, sectors, compare, voice, pdf, briefing, search, ticker_tape, market_status, chat
+from routers import marketpulse
 
 app.include_router(stock.router)
 app.include_router(sectors.router)
@@ -42,7 +43,16 @@ app.include_router(search.router)
 app.include_router(ticker_tape.router)
 app.include_router(market_status.router)
 app.include_router(chat.router)
+app.include_router(marketpulse.router)
 
 @app.get("/api/health", tags=["health"])
 async def health_check():
     return {"status": "ok", "app": "ZeroOne", "tagline": "The market speaks. We translate."}
+
+# Serve React frontend — must be LAST so API routes take priority
+import os
+from fastapi.staticfiles import StaticFiles
+
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(_static_dir):
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

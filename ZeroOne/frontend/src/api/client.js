@@ -1,6 +1,6 @@
 // frontend/src/api/client.js
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080"
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080"
 
 export const api = {
   searchTicker: (q) =>
@@ -72,6 +72,12 @@ export const api = {
       return r.json();
     }),
 
+  getMarketMovers: () =>
+    fetch(`${API_BASE}/api/ticker-tape/movers`).then(r => {
+      if (!r.ok) throw new Error("Fetch movers failed");
+      return r.json();
+    }),
+
   getMarketStatus: () =>
     fetch(`${API_BASE}/api/market-status`).then(r => {
       if (!r.ok) throw new Error("Fetch market status failed");
@@ -84,4 +90,19 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, context })
     }).then(r => r.json()),
+
+  getMarketPulse: () =>
+    fetch(`${API_BASE}/api/marketpulse`).then(r => {
+      if (!r.ok) throw new Error("MarketPulse fetch failed");
+      return r.json();
+    }),
+
+  getMarketPulseSnapshots: () =>
+    fetch(`${API_BASE}/api/marketpulse/snapshots`).then(r => {
+      if (!r.ok) throw new Error("Snapshots fetch failed");
+      return r.json();
+    }),
+
+  triggerMarketPulseSnapshot: () =>
+    fetch(`${API_BASE}/api/marketpulse/snapshot`, { method: "POST" }).then(r => r.json()),
 }

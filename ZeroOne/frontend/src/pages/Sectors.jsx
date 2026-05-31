@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 export default function Sectors() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [sectorsData, setSectorsData] = useState({
     sectors: [
@@ -105,7 +107,8 @@ export default function Sectors() {
             {sectorsData.sectors.map((sec) => (
               <div
                 key={sec.name}
-                className={`rounded flex flex-col items-center justify-center p-3 text-center border cursor-default transition-all hover:scale-105 ${getHeatmapColor(
+                onClick={() => sec.top_stock && navigate(`/stock/${sec.top_stock}`)}
+                className={`rounded flex flex-col items-center justify-center p-3 text-center border cursor-pointer transition-all hover:scale-105 ${getHeatmapColor(
                   sec.change
                 )}`}
               >
@@ -152,7 +155,10 @@ export default function Sectors() {
                   <td className={`py-3 px-4 text-right ${sec.dii_flow >= 0 ? "positive" : "negative"}`}>
                     {sec.dii_flow >= 0 ? "+" : ""}{sec.dii_flow} Cr
                   </td>
-                  <td className="py-3 pl-4 text-on-surface hover:text-primary transition-colors font-bold cursor-pointer">
+                  <td
+                    className="py-3 pl-4 text-on-surface hover:text-primary transition-colors font-bold cursor-pointer"
+                    onClick={() => sec.top_stock && navigate(`/stock/${sec.top_stock}`)}
+                  >
                     {sec.top_stock}
                   </td>
                 </tr>

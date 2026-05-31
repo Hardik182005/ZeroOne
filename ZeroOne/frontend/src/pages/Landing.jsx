@@ -1,6 +1,36 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
+function FAQAccordion() {
+  const [open, setOpen] = useState(null);
+  const FAQS = [
+    { q: "Is this real-time NSE data?", a: "Yes. ZeroOne uses Anakin Wire connectors that pull live data from NSE India, BSE, Screener.in, Economic Times, and Moneycontrol simultaneously. When API keys are configured, all data is live." },
+    { q: "Is this financial advice?", a: "No. ZeroOne is an AI-powered research tool. All output is informational only. Always verify with a SEBI-registered advisor before making investment decisions." },
+    { q: "Which stocks are covered?", a: "All NSE-listed stocks are supported. The top 500 stocks have enhanced fundamental data via Screener.in. Any valid NSE symbol can be analysed." },
+    { q: "How fast is the analysis?", a: "Average end-to-end analysis takes 3.2 seconds. All 16 data source calls run in parallel using asyncio.gather. Groq's LPU delivers AI inference in under 1 second." },
+    { q: "What is the 'promoter trust score'?", a: "A 0–100 score computed from promoter holding %, pledging %, insider trading patterns, and bulk deal history. Above 80 is considered trustworthy, below 50 warrants caution." },
+    { q: "Does it work on mobile?", a: "Yes. ZeroOne is fully responsive. The AI Assistant, Analyse page, and MarketPulse work great on mobile. Voice narration requires Chrome on Android or Safari on iOS." },
+  ];
+  return (
+    <div className="space-y-2">
+      {FAQS.map(({ q, a }, i) => (
+        <div key={i} className="border border-[#e8e4f0] rounded-xl overflow-hidden">
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#faf9ff] transition-colors"
+          >
+            <span className="text-[14px] font-semibold text-[#0d0d0d]">{q}</span>
+            <span className="material-symbols-outlined text-[18px] text-[#5317dd] shrink-0 ml-3 transition-transform" style={{ transform: open === i ? 'rotate(180deg)' : 'rotate(0deg)' }}>expand_more</span>
+          </button>
+          {open === i && (
+            <div className="px-5 pb-4 text-[13px] text-[#797487] leading-relaxed border-t border-[#f0ebff]">{a}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Landing() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,7 +53,7 @@ export default function Landing() {
   // Pipeline Animation State Machine
   const [isPipelineVisible, setIsPipelineVisible] = useState(false);
   const pipelineRef = useRef(null);
-  
+
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
   const [pipelineStep, setPipelineStep] = useState(0); // 0 (idle), 1, 2, 3, 4, 5
   const [pipelineQueryText, setPipelineQueryText] = useState("");
@@ -53,7 +83,7 @@ export default function Landing() {
     const targetPrice = currentStock.basePrice;
     const increment = targetPrice / totalFrames;
     let frame = 0;
-    
+
     // reset chart
     setChartOffset(1000);
 
@@ -137,7 +167,7 @@ export default function Landing() {
     if (searchQuery.trim()) {
       navigate(`/stock/${searchQuery.trim().toUpperCase()}`);
     } else {
-      navigate("/dashboard");
+      navigate("/analyse");
     }
   };
 
@@ -160,7 +190,7 @@ export default function Landing() {
     // Timeline configuration
     const queries = ["RELIANCE", "INFY", "TATAMOTORS"];
     const queryStr = queries[Math.floor(Math.random() * queries.length)];
-    
+
     // Step 1: Type "RELIANCE"
     for (let i = 0; i <= queryStr.length; i++) {
       const charTimer = setTimeout(() => {
@@ -168,7 +198,7 @@ export default function Landing() {
       }, i * 80); // types over 80ms per char
       timelineTimers.current.push(charTimer);
     }
-    
+
     const typeDuration = queryStr.length * 80;
 
     // Step 2: Anakin Wire
@@ -233,7 +263,7 @@ export default function Landing() {
 
   return (
     <div className="bg-[#fcf9f8] text-[#1c1b1b] font-body-md text-body-md antialiased overflow-x-hidden select-none">
-      
+
       {/* 1. Live Ticker Bar (Top) */}
       <div className="fixed top-0 left-0 w-full h-[40px] bg-purple-night z-50 overflow-hidden flex items-center shadow-md font-data-mono text-data-mono">
         <div className="absolute inset-0 w-1/4 bg-gradient-to-r from-white/10 to-transparent opacity-20 animate-scanline pointer-events-none"></div>
@@ -317,14 +347,14 @@ export default function Landing() {
             <a className="text-[#484456] hover:text-[#5317dd] transition-colors duration-300 font-label-caps text-[11px] tracking-widest" href="#how-it-works">How it works</a>
           </div>
           <div className="flex items-center gap-4">
-            <a 
+            <a
               className="hidden md:block font-label-caps text-xs tracking-wider text-[#484456] hover:text-[#5317dd] transition-colors font-semibold"
-              href="#/dashboard"
+              href="#/analyse"
             >
               Login
             </a>
-            <button 
-              onClick={() => navigate("/dashboard")}
+            <button
+              onClick={() => navigate("/analyse")}
               className="bg-[#5317dd] text-white px-6 py-2.5 rounded font-label-caps text-xs tracking-wider btn-shimmer hover:opacity-90 transition-all shadow-md font-bold"
             >
               Get Started
@@ -367,15 +397,15 @@ export default function Landing() {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-[#797487]">search</span>
                 </div>
-                <input 
+                <input
                   type="text"
-                  placeholder="Search a stock (e.g., RELIANCE)..." 
+                  placeholder="Search a stock (e.g., RELIANCE)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-white border border-[#cac3d9] text-[#0d0d0d] placeholder-[#0d0d0d]/50 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:border-[#5317dd] focus:ring-1 focus:ring-[#5317dd] transition-all shadow-sm font-data-mono text-sm"
                 />
               </div>
-              <button 
+              <button
                 type="submit"
                 className="bg-[#5317dd] text-white px-8 py-3 rounded-lg font-label-caps text-xs tracking-wider btn-shimmer hover:bg-[#5317dd]/90 transition-colors shadow-md font-bold uppercase"
               >
@@ -386,7 +416,7 @@ export default function Landing() {
 
           {/* Dashboard Mockup (RELIANCE Stock Card Mock) */}
           <div className="relative hidden md:block perspective-[1000px] w-full max-w-[500px] justify-self-center animate-fade-up" style={{animationDelay: '0.4s', opacity: 0}}>
-            <div 
+            <div
               onClick={() => navigate(`/stock/${currentStock.ticker}`)}
               className="cinematic-card w-full aspect-[4/3] transform rotate-y-[-10deg] rotate-x-[5deg] shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition-transform duration-700 hover:rotate-y-0 hover:rotate-x-0 p-6 flex flex-col gap-4 border border-[#cac3d9]/50 cursor-pointer"
             >
@@ -409,19 +439,19 @@ export default function Landing() {
               {/* Chart Area */}
               <div className="flex-grow bg-[#fafafa] rounded border border-[#cac3d9]/20 relative overflow-hidden h-28">
                 <svg className="w-full h-full absolute bottom-0" preserveAspectRatio="none" viewBox="0 0 400 200">
-                  <path 
-                    className="chart-path transition-opacity duration-1000" 
-                    d={currentStockIndex % 2 === 0 ? "M0,150 C50,140 100,180 150,120 C200,60 250,100 300,40 C350,-20 400,20 400,20 L400,200 L0,200 Z" : "M0,180 C50,160 100,120 150,140 C200,100 250,80 300,60 C350,20 400,40 400,40 L400,200 L0,200 Z"} 
+                  <path
+                    className="chart-path transition-opacity duration-1000"
+                    d={currentStockIndex % 2 === 0 ? "M0,150 C50,140 100,180 150,120 C200,60 250,100 300,40 C350,-20 400,20 400,20 L400,200 L0,200 Z" : "M0,180 C50,160 100,120 150,140 C200,100 250,80 300,60 C350,20 400,40 400,40 L400,200 L0,200 Z"}
                     fill="url(#chart-gradient)"
                   />
-                  <path 
-                    className="chart-line" 
-                    d={currentStockIndex % 2 === 0 ? "M0,150 C50,140 100,180 150,120 C200,60 250,100 300,40 C350,-20 400,20 400,20" : "M0,180 C50,160 100,120 150,140 C200,100 250,80 300,60 C350,20 400,40 400,40"} 
-                    fill="none" 
-                    stroke={currentStock.changeColor.includes("ba1a1a") ? "#ba1a1a" : "#6C3FF5"} 
-                    strokeDasharray="1000" 
-                    strokeDashoffset={chartOffset} 
-                    strokeWidth="2" 
+                  <path
+                    className="chart-line"
+                    d={currentStockIndex % 2 === 0 ? "M0,150 C50,140 100,180 150,120 C200,60 250,100 300,40 C350,-20 400,20 400,20" : "M0,180 C50,160 100,120 150,140 C200,100 250,80 300,60 C350,20 400,40 400,40"}
+                    fill="none"
+                    stroke={currentStock.changeColor.includes("ba1a1a") ? "#ba1a1a" : "#6C3FF5"}
+                    strokeDasharray="1000"
+                    strokeDashoffset={chartOffset}
+                    strokeWidth="2"
                     style={{ transition: "stroke-dashoffset 2s ease-out" }}
                   />
                   <defs>
@@ -483,19 +513,126 @@ export default function Landing() {
         </div>
       </div>
 
+      {/* Stats Bar */}
+      <div className="bg-white border-b border-[#cac3d9]/40 py-8">
+        <div className="max-w-[1100px] mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {[
+            { value: "500+", label: "NSE Stocks Covered" },
+            { value: "8",    label: "Live Wire Connectors" },
+            { value: "3.2s", label: "Avg Analysis Time" },
+            { value: "4",    label: "AI Models in Stack" },
+          ].map(({ value, label }) => (
+            <div key={label}>
+              <div className="text-[36px] font-bold text-[#5317dd] leading-none mb-1" style={{ fontFamily: 'monospace' }}>{value}</div>
+              <div className="text-[13px] text-[#797487]">{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <section id="features" className="py-[90px] bg-[#fcf9f8] border-b border-[#cac3d9]/30">
+        <div className="max-w-[1100px] mx-auto px-8">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-bold text-[#5317dd] tracking-[0.2em] uppercase block mb-3">What ZeroOne Does</span>
+            <h2 className="text-[36px] md:text-[44px] font-bold text-[#0d0d0d] tracking-tight leading-tight">
+              Every edge. One terminal.
+            </h2>
+            <p className="text-[16px] text-[#797487] mt-4 max-w-2xl mx-auto">
+              Built for the Indian retail investor who is tired of switching between 7 tabs to get a full picture.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              {
+                icon: "auto_awesome",
+                color: "#5317dd",
+                bg: "#f0ebff",
+                title: "AI Verdict",
+                desc: "Groq Llama 3.3 reads 16 data points and gives you BULLISH / CAUTIOUS / AVOID in plain English. No jargon."
+              },
+              {
+                icon: "campaign",
+                color: "#0070f3",
+                bg: "#e8f0ff",
+                title: "MarketPulse",
+                desc: "Narrative detection across ET, Moneycontrol, and StockTwits. See when a story is shifting before the price does."
+              },
+              {
+                icon: "radar",
+                color: "#00875a",
+                bg: "#e3f5ec",
+                title: "Options Pulse",
+                desc: "Live PCR, Max Pain, IV percentile and highest OI strikes for any NSE stock. Know where the smart money sits."
+              },
+              {
+                icon: "groups",
+                color: "#d97706",
+                bg: "#fef3e2",
+                title: "Promoter Intel",
+                desc: "Promoter holding %, pledging %, insider trades, and bulk deals in one panel. The most reliable signal in India."
+              },
+              {
+                icon: "record_voice_over",
+                color: "#be185d",
+                bg: "#fde7f3",
+                title: "Voice Narration",
+                desc: "ElevenLabs TTS reads your stock analysis aloud. Get your morning briefing while commuting."
+              },
+              {
+                icon: "compare_arrows",
+                color: "#7c3aed",
+                bg: "#ede9fe",
+                title: "Stock Compare",
+                desc: "GPT-4o compares two stocks head-to-head across valuation, growth, momentum, and risk. Decisive winner output."
+              },
+              {
+                icon: "picture_as_pdf",
+                color: "#dc2626",
+                bg: "#fde8e8",
+                title: "PDF Reports",
+                desc: "Download a full Gemini-generated equity research report for any stock. Shareable, printable, institutional-grade."
+              },
+              {
+                icon: "donut_small",
+                color: "#0891b2",
+                bg: "#e0f7fa",
+                title: "Sector Rotation",
+                desc: "FII and DII net flow by sector, heatmap, and top movers. Know which sectors institutions are rotating into today."
+              },
+              {
+                icon: "schedule",
+                color: "#059669",
+                bg: "#d1fae5",
+                title: "Earnings Radar",
+                desc: "Alerts when a stock in your watchlist reports earnings within 72 hours. Beat probability from options IV."
+              },
+            ].map(({ icon, color, bg, title, desc }) => (
+              <div key={title} className="bg-white border border-[#e8e4f0] rounded-2xl p-6 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: bg }}>
+                  <span className="material-symbols-outlined text-[22px]" style={{ color, fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+                </div>
+                <h3 className="text-[15px] font-bold text-[#0d0d0d] mb-2">{title}</h3>
+                <p className="text-[13px] text-[#797487] leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* 6. How It Works Under The Hood */}
       <section className="py-[100px] bg-[#F5F3FF] relative overflow-hidden border-b border-[#cac3d9]/50" id="how-it-works" ref={pipelineRef}>
         <div className="absolute inset-0 opacity-4" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
         <div className="max-w-[1440px] mx-auto px-8 relative z-10">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className={`font-body-md text-[11px] text-[#9B98B8] tracking-[0.2em] uppercase font-medium block mb-4 transition-all duration-1000 ${isPipelineVisible ? 'opacity-100' : 'opacity-0'}`}>
               How It Works Under The Hood
             </span>
             <h2 className="font-display-hero text-3xl md:text-[40px] md:leading-[48px] text-[#0D0D0D] mb-6 font-bold tracking-tight">
               {"One search. Seven sources. One truth.".split(" ").map((word, i) => (
-                <span 
-                  key={i} 
+                <span
+                  key={i}
                   className={`inline-block mr-2 transition-all duration-700 ease-out ${isPipelineVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-[30px] blur-[12px]'}`}
                   style={{ transitionDelay: `${i * 0.07}s` }}
                 >
@@ -509,26 +646,26 @@ export default function Landing() {
           </div>
 
           <div className={`bg-white rounded-[24px] border-[1.5px] border-[#EEEBFF] p-8 md:p-12 relative max-w-[1200px] mx-auto transition-all duration-1000 delay-500 ${isPipelineVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[40px]'}`} style={{ boxShadow: '0 8px 40px rgba(108,63,245,0.08)' }}>
-            
+
             {/* Pipeline Visual Container */}
             <div className="relative w-full mx-auto mb-8 flex flex-col md:flex-row items-start justify-between gap-12 md:gap-4 min-h-[300px] pt-4">
-              
+
               {/* Desktop Connectors */}
               <svg className="hidden md:block absolute top-[60px] left-[10%] right-[10%] w-[80%] h-10 z-0 pointer-events-none" style={{ overflow: 'visible' }}>
                 {/* Conn 1 -> 2 */}
                 <path d="M0,20 L220,20" stroke="#6C3FF5" strokeWidth="2" strokeDasharray="6 4" strokeDashoffset={pipelineStep >= 1 ? "0" : "100%"} className="transition-all duration-700 ease-out" />
                 {pipelineStep >= 1 && <circle cx="0" cy="20" r="4" fill="#6C3FF5" className="animate-packet-travel" style={{ offsetPath: "path('M0,20 L220,20')" }} />}
-                
+
                 {/* Conn 2 -> 3 */}
                 <path d="M220,20 L480,20" stroke="#6C3FF5" strokeWidth="3" strokeDasharray="6 4" strokeDashoffset={pipelineStep >= 2 ? "0" : "100%"} className="transition-all duration-700 ease-out delay-200" />
                 {pipelineStep >= 2 && <circle cx="0" cy="20" r="4" fill="#6C3FF5" className="animate-packet-travel" style={{ offsetPath: "path('M220,20 L480,20')" }} />}
                 {pipelineStep >= 2 && <foreignObject x="310" y="0" width="80" height="20" className="animate-fade-up"><div className="bg-white border border-[#EEEBFF] text-[#9B98B8] text-[10px] px-2 rounded-full text-center shadow-sm">~15KB payload</div></foreignObject>}
-                
+
                 {/* Conn 3 -> 4 */}
                 <path d="M480,20 L740,20" stroke="#6C3FF5" strokeWidth="2" strokeDasharray="6 4" strokeDashoffset={pipelineStep >= 3 ? "0" : "100%"} className="transition-all duration-700 ease-out delay-200" />
                 {pipelineStep >= 3 && <circle cx="0" cy="20" r="4" fill="#6C3FF5" className="animate-packet-travel" style={{ offsetPath: "path('M480,20 L740,20')" }} />}
                 {pipelineStep >= 3 && <foreignObject x="570" y="0" width="80" height="20" className="animate-fade-up"><div className="bg-white border border-[#EEEBFF] text-[#9B98B8] text-[10px] px-2 rounded-full text-center shadow-sm">AI reasoning</div></foreignObject>}
-                
+
                 {/* Conn 4 -> 5 */}
                 <path d="M740,20 L980,20" stroke="#6C3FF5" strokeWidth="2" strokeDasharray="6 4" strokeDashoffset={pipelineStep >= 4 ? "0" : "100%"} className="transition-all duration-700 ease-out delay-200" />
                 {pipelineStep >= 4 && <circle cx="0" cy="20" r="4" fill="#6C3FF5" className="animate-packet-travel" style={{ offsetPath: "path('M740,20 L980,20')" }} />}
@@ -567,11 +704,11 @@ export default function Landing() {
                   <span className="font-body-md text-[12px] text-[#9B98B8] block mb-3">Parallel fetch engine</span>
                   <div className="flex flex-wrap justify-center gap-1.5 w-[160px] mx-auto">
                     {["NSE", "BSE", "Screener", "ET", "Moneycontrol", "StockTwits", "Trends"].map((chip, idx) => (
-                      <span 
-                        key={chip} 
+                      <span
+                        key={chip}
                         className={`text-[10px] font-title-md font-medium px-2 py-1 rounded-md border transition-all duration-300 ${
-                          pipelineChipsActive[idx] 
-                            ? "border-[#6C3FF5] bg-[#6C3FF5]/5 text-[#6C3FF5]" 
+                          pipelineChipsActive[idx]
+                            ? "border-[#6C3FF5] bg-[#6C3FF5]/5 text-[#6C3FF5]"
                             : "border-[#EEEBFF] bg-white text-[#5A5A72]"
                         }`}
                       >
@@ -673,7 +810,7 @@ export default function Landing() {
 
             {/* Action Trigger Button */}
             <div className={`absolute bottom-[-20px] left-1/2 -translate-x-1/2 z-20 transition-transform duration-500 ${isPipelineVisible ? 'scale-100' : 'scale-0'}`} style={{ transitionDelay: '3100ms' }}>
-              <button 
+              <button
                 onClick={() => triggerPipelineRun(false)}
                 className="bg-white text-[#6C3FF5] hover:bg-[#F5F3FF] px-5 py-2 rounded-lg font-title-md text-[13px] font-semibold border-[1.5px] border-[#6C3FF5]/30 hover:border-[#6C3FF5] transition-all duration-300 flex items-center gap-2 shadow-sm"
               >
@@ -688,6 +825,96 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* AI Stack */}
+      <section className="py-[80px] bg-white border-b border-[#cac3d9]/30">
+        <div className="max-w-[1100px] mx-auto px-8">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold text-[#5317dd] tracking-[0.2em] uppercase block mb-3">Powered By</span>
+            <h2 className="text-[32px] font-bold text-[#0d0d0d] tracking-tight">Four AI models. One answer.</h2>
+            <p className="text-[15px] text-[#797487] mt-3 max-w-xl mx-auto">Each model does what it does best. You get the combined output in seconds.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              { name: "Groq Llama 3.3", role: "Primary Analysis", badge: "70B", detail: "Reads all 16 data points, generates the verdict, risks, and promoter trust score.", color: "#f97316", bg: "#fff7ed" },
+              { name: "Gemini Flash", role: "Fallback + PDF", badge: "1.5", detail: "Generates full equity research PDF reports and acts as fallback when Groq is slow.", color: "#0070f3", bg: "#eff6ff" },
+              { name: "GPT-4o", role: "Stock Compare", badge: "4o", detail: "The most rigorous comparison engine. Used only for head-to-head stock analysis.", color: "#16a34a", bg: "#f0fdf4" },
+              { name: "ElevenLabs", role: "Voice TTS", badge: "V2", detail: "Converts your stock analysis to natural-sounding voice narration for the morning briefing.", color: "#7c3aed", bg: "#faf5ff" },
+            ].map(({ name, role, badge, detail, color, bg }) => (
+              <div key={name} className="border border-[#e8e4f0] rounded-2xl p-5 hover:shadow-sm transition-all">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-[13px]" style={{ background: bg, color }}>
+                    {badge}
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: bg, color }}>{role}</span>
+                </div>
+                <h4 className="text-[14px] font-bold text-[#0d0d0d] mb-2">{name}</h4>
+                <p className="text-[12px] text-[#797487] leading-relaxed">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-[80px] bg-[#f5f3ff] border-b border-[#cac3d9]/30">
+        <div className="max-w-[900px] mx-auto px-8">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold text-[#5317dd] tracking-[0.2em] uppercase block mb-3">Pricing</span>
+            <h2 className="text-[32px] font-bold text-[#0d0d0d] tracking-tight">Simple. No surprises.</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[680px] mx-auto">
+            {/* Free */}
+            <div className="bg-white border border-[#e8e4f0] rounded-2xl p-7">
+              <div className="mb-6">
+                <h3 className="text-[18px] font-bold text-[#0d0d0d] mb-1">Free</h3>
+                <div className="text-[36px] font-bold text-[#0d0d0d]">₹0 <span className="text-[16px] font-normal text-[#797487]">/ month</span></div>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {["10 stock analyses per day", "AI verdict (Groq)", "Sector rotation heatmap", "MarketPulse narratives", "Basic options pulse"].map(f => (
+                  <li key={f} className="flex items-center gap-2.5 text-[13px] text-[#4a4560]">
+                    <span className="material-symbols-outlined text-[16px] text-[#00875a]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => navigate("/analyse")} className="w-full border-2 border-[#5317dd] text-[#5317dd] font-bold text-[13px] py-2.5 rounded-xl hover:bg-[#f5f3ff] transition-colors">
+                Get Started Free
+              </button>
+            </div>
+            {/* Pro */}
+            <div className="bg-[#5317dd] border border-[#4210b8] rounded-2xl p-7 relative overflow-hidden">
+              <div className="absolute top-4 right-4 bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">MOST POPULAR</div>
+              <div className="mb-6">
+                <h3 className="text-[18px] font-bold text-white mb-1">Pro</h3>
+                <div className="text-[36px] font-bold text-white">₹999 <span className="text-[16px] font-normal text-white/60">/ month</span></div>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {["Unlimited stock analyses", "Voice narration (ElevenLabs)", "PDF research reports", "GPT-4o stock compare", "Morning briefing audio", "Earnings radar alerts", "Priority AI response"].map(f => (
+                  <li key={f} className="flex items-center gap-2.5 text-[13px] text-white/90">
+                    <span className="material-symbols-outlined text-[16px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => navigate("/analyse")} className="w-full bg-white text-[#5317dd] font-bold text-[13px] py-2.5 rounded-xl hover:opacity-90 transition-opacity shadow-sm">
+                Upgrade to Pro
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-[80px] bg-white border-b border-[#cac3d9]/30">
+        <div className="max-w-[700px] mx-auto px-8">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold text-[#5317dd] tracking-[0.2em] uppercase block mb-3">FAQ</span>
+            <h2 className="text-[32px] font-bold text-[#0d0d0d] tracking-tight">Questions we get a lot</h2>
+          </div>
+          <FAQAccordion />
+        </div>
+      </section>
+
       {/* 8. Final CTA */}
       <section className="bg-white text-[#0d0d0d] relative overflow-hidden border-t border-[#cac3d9]/30 py-[100px]">
         <div className="absolute inset-0 bg-[#fafafa] opacity-50"></div>
@@ -696,8 +923,8 @@ export default function Landing() {
             ZeroOne Financial Intelligence
           </h2>
           <div className="flex flex-col items-center gap-3">
-            <button 
-              onClick={() => navigate("/dashboard")}
+            <button
+              onClick={() => navigate("/analyse")}
               className="bg-[#5317dd] text-white px-10 py-4 rounded-full font-label-caps text-sm font-bold shadow-md hover:scale-105 transition-transform duration-300 uppercase tracking-wider btn-shimmer"
             >
               Get Started
@@ -707,13 +934,39 @@ export default function Landing() {
       </section>
 
       {/* 9. Footer */}
-      <footer className="bg-white border-t border-[#cac3d9] w-full py-8">
-        <div className="max-w-[1440px] mx-auto px-8 flex flex-col items-center justify-center gap-6">
-          <div className="text-center">
-            <span className="font-display-hero text-headline-lg text-primary">ZeroOne</span>
-            <p className="font-label-caps text-label-caps italic text-on-surface-variant mt-2">
-              © 2026 ZeroOne Financial Intelligence. Built by Hardik Hinduja.
-            </p>
+      <footer className="bg-[#0d0d0d] text-white py-12">
+        <div className="max-w-[1100px] mx-auto px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-[#5317dd] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>insights</span>
+                </div>
+                <span className="text-[16px] font-bold">ZeroOne</span>
+              </div>
+              <p className="text-[13px] text-white/50 leading-relaxed max-w-xs">India's AI-powered equity intelligence terminal. Built for retail investors who want institutional-grade signals.</p>
+              <p className="text-[11px] text-white/30 mt-4 italic">The market speaks. We translate.</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-white/40 uppercase tracking-wider mb-4">Product</p>
+              <div className="space-y-2">
+                {["Analyse Stock", "MarketPulse", "Sector Rotation", "Compare Stocks", "AI Assistant"].map(l => (
+                  <button key={l} onClick={() => navigate("/analyse")} className="block text-[13px] text-white/60 hover:text-white transition-colors text-left">{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-white/40 uppercase tracking-wider mb-4">Data Stack</p>
+              <div className="space-y-2 text-[13px] text-white/60">
+                {["NSE India (live)", "BSE India", "Screener.in", "Economic Times", "Moneycontrol", "StockTwits", "Fear & Greed", "Google Trends"].map(s => (
+                  <p key={s}>{s}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
+            <p className="text-[12px] text-white/30">© 2026 ZeroOne Financial Intelligence. Built by Hardik Hinduja.</p>
+            <p className="text-[12px] text-white/30">Not SEBI registered. For informational purposes only.</p>
           </div>
         </div>
       </footer>

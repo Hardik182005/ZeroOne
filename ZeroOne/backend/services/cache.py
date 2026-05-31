@@ -67,3 +67,30 @@ async def delete_cached(key: str):
         await _redis_client.delete(key)
     except Exception as e:
         print(f"[CACHE] Redis DELETE error: {e}")
+
+
+async def zadd_sorted(key: str, score: float, value: str):
+    if _redis_client is None:
+        return
+    try:
+        await _redis_client.zadd(key, {value: score})
+    except Exception as e:
+        print(f"[CACHE] Redis ZADD error: {e}")
+
+
+async def zrange_sorted(key: str, start: int = 0, end: int = -1, withscores: bool = False):
+    if _redis_client is None:
+        return []
+    try:
+        return await _redis_client.zrange(key, start, end, withscores=withscores)
+    except Exception:
+        return []
+
+
+async def zremrangebyrank_sorted(key: str, start: int, stop: int):
+    if _redis_client is None:
+        return
+    try:
+        await _redis_client.zremrangebyrank(key, start, stop)
+    except Exception:
+        pass

@@ -190,6 +190,6 @@ async def get_stock_intelligence(ticker: str):
     }
 
     # 8. Cache for 5 minutes (300s)
-    await set_cached(cache_key, response, ttl=300)
+    await set_cached(cache_key, response, ttl=1800)
 
     return response
