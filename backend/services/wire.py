@@ -372,28 +372,44 @@ async def wire_call(connector: str, action: str, params: dict):
     anakin = await _anakin_call(connector, action, params)
     return anakin or get_mock_data(connector, action, params)
 
+# ── Background anakin.io cache (survives across requests) ─────────────────────
+_anakin_bg: dict = {}   # ticker → parsed anakin data
+
+async def _bg_anakin_scrape(ticker: str):
+    """Fire anakin.io scraping and store result — runs in background, never blocks."""
+    try:
+        from services.anakin_io import fetch_all_anakin
+        data = await fetch_all_anakin(ticker)
+        _anakin_bg[ticker] = data
+        print(f"[anakin.io BG] {ticker} done — data keys: {list(data.keys())}")
+    except Exception as e:
+        print(f"[anakin.io BG] {ticker} failed: {e}")
+
+def _inject_anakin(ticker: str):
+    """Push cached anakin.io data into the per-request yf_cache for wire_call."""
+    data = _anakin_bg.get(ticker, {})
+    if not data:
+        return
+    screener = data.get("screener", {})
+    if screener.get("fundamentals"):
+        _yf_cache["__anakin_fundamentals__"] = screener["fundamentals"]
+    if screener.get("shareholding"):
+        _yf_cache["__anakin_shareholding__"] = screener["shareholding"]
+    if data.get("news"):
+        _yf_cache["__anakin_news__"] = data["news"]
+    if data.get("consensus"):
+        _yf_cache["__anakin_consensus__"] = data["consensus"]
+
 # ── Batch fetchers ─────────────────────────────────────────────────────────────
 async def fetch_all_stock_data(ticker: str, company_name: str):
-    # ── Fire anakin.io scraping jobs + yfinance in parallel ──────────────────
-    from services.anakin_io import fetch_all_anakin
-    anakin_task = asyncio.create_task(fetch_all_anakin(ticker))
-    yf_task     = asyncio.create_task(get_yfinance_data(ticker))
+    # 1. Inject any previously scraped anakin.io data
+    _inject_anakin(ticker)
 
-    anakin_data, _ = await asyncio.gather(anakin_task, yf_task, return_exceptions=True)
-    if isinstance(anakin_data, Exception):
-        anakin_data = {}
+    # 2. Start new anakin.io scrape in BACKGROUND (non-blocking, ~90 sec)
+    asyncio.create_task(_bg_anakin_scrape(ticker))
 
-    # Inject anakin.io results into cache so wire_call picks them up
-    if anakin_data:
-        screener = anakin_data.get("screener", {})
-        if screener.get("fundamentals"):
-            _yf_cache["__anakin_fundamentals__"] = screener["fundamentals"]
-        if screener.get("shareholding"):
-            _yf_cache["__anakin_shareholding__"] = screener["shareholding"]
-        if anakin_data.get("news"):
-            _yf_cache["__anakin_news__"] = anakin_data["news"]
-        if anakin_data.get("consensus"):
-            _yf_cache["__anakin_consensus__"] = anakin_data["consensus"]
+    # 3. Pre-warm yfinance (fast, ~2 sec) so wire_calls reuse cache
+    await get_yfinance_data(ticker)
 
     results = await asyncio.gather(
         wire_call("nse-india",        "get_quote",              {"symbol": ticker}),
