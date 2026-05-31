@@ -1,0 +1,30 @@
+.git
+.gitignore
+.gcloudignore
+
+# Node — rebuilt inside Docker
+frontend/node_modules/
+frontend/dist/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Firebase (not used in GCP deploy)
+.firebase/
+.firebaserc
+firebase.json
+
+# Secrets — use Secret Manager, never upload .env
+backend/.env
+frontend/.env
+**/.env.local
+
+# OS
+.DS_Store
+**/.DS_Store
+
+# Test output
+backend/test_output.json
+backend/test_api.py
