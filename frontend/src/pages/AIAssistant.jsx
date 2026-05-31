@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+import { api } from "../api/client";
+import { getPageContext } from "../lib/pageContext";
 
 const SUGGESTED_QUESTIONS = [
   "Is RELIANCE a buy right now?",
@@ -34,17 +34,14 @@ export default function Settings() {
     setInput("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim() })
-      });
-      const data = await res.json();
-      const reply = data.reply || "I couldn't process that. Try again.";
+      // Use the shared api.chat (same path as the floating orb) so behaviour is
+      // identical, and pass the current page context so answers are page-aware.
+      const data = await api.chat(text.trim(), getPageContext());
+      const reply = data?.reply || "I couldn't process that. Try again.";
       setMessages(prev => [...prev, { role: "assistant", text: reply }]);
       if (voiceEnabled) speakText(reply);
     } catch (err) {
-      setMessages(prev => [...prev, { role: "assistant", text: "Network error. Check your connection." }]);
+      setMessages(prev => [...prev, { role: "assistant", text: "AI assistant unavailable right now. Please try again in a moment." }]);
     } finally {
       setLoading(false);
     }

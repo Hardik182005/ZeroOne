@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { api } from "../api/client";
+import { getPageContext } from "../lib/pageContext";
 
 // Browser SpeechRecognition (voice input) — Chrome/Edge expose it prefixed.
 const SpeechRecognition =
@@ -94,7 +95,7 @@ export default function ChatOrb() {
     setInput("");
     setLoading(true);
     try {
-      const data = await api.chat(trimmed);
+      const data = await api.chat(trimmed, getPageContext());
       const reply = data?.reply || "I couldn't process that. Try again.";
       let replyIdx = -1;
       setMessages(prev => { replyIdx = prev.length; return [...prev, { role: "assistant", text: reply }]; });

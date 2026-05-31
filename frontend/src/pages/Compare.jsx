@@ -139,8 +139,8 @@ export default function Compare() {
                   <span className="font-data-mono font-bold text-sm text-primary">{comparison.winner_growth}</span>
                 </div>
                 <div className="bg-surface-container p-3 rounded text-center">
-                  <span className="text-[10px] text-on-surface-variant block font-label-caps mb-1">Momentum Winner</span>
-                  <span className="font-data-mono font-bold text-sm text-primary">{comparison.winner_momentum}</span>
+                  <span className="text-[10px] text-on-surface-variant block font-label-caps mb-1">Scale (M-Cap) Winner</span>
+                  <span className="font-data-mono font-bold text-sm text-primary">{comparison.winner_scale || comparison.winner_momentum}</span>
                 </div>
                 <div className="bg-surface-container p-3 rounded text-center">
                   <span className="text-[10px] text-on-surface-variant block font-label-caps mb-1">Risk Profile Winner</span>

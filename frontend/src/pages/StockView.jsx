@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { setPageContext, buildStockContext } from "../lib/pageContext";
 
 const QUARTER_LABELS = ["Q1'23", "Q2'23", "Q3'23", "Q4'23", "Q1'24", "Q2'24", "Q3'24", "Q4'24"];
 
@@ -264,6 +265,12 @@ export default function StockView() {
   useEffect(() => {
     fetchStock(false);
   }, [ticker]);
+
+  // Feed the current stock into the shared page context so the AI assistant
+  // (page + orb) can answer with full info about what the user is viewing.
+  useEffect(() => {
+    if (data) setPageContext(buildStockContext(ticker, data));
+  }, [data, ticker]);
 
   const safePlay = (el) => {
     // play() returns a promise that rejects on autoplay policy / load errors —

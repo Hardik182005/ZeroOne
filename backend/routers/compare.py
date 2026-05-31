@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from services.claude import get_claude_comparison
 from services.wire import wire_call
 
 router = APIRouter(prefix="/api/compare", tags=["compare"])
@@ -41,6 +40,34 @@ def _fmt_change(cp):
     if n is None:
         return "0.0%"
     return f"+{n}%" if n >= 0 else f"{n}%"
+
+
+def _mcap(v):
+    """Parse a market cap into a comparable number (handles T/B/Cr/L suffixes)."""
+    if v is None:
+        return None
+    s = str(v).upper().replace("₹", "").replace(",", "").strip()
+    mult = 1.0
+    if s.endswith("T"):    mult, s = 1e12, s[:-1]
+    elif s.endswith("B"):  mult, s = 1e9, s[:-1]
+    elif s.endswith("CR"): mult, s = 1e7, s[:-2]
+    elif s.endswith("L"):  mult, s = 1e5, s[:-1]
+    try:
+        return float(s) * mult
+    except (ValueError, TypeError):
+        return None
+
+
+def _pick_val(a, b, t1, t2, lower_better):
+    if a is None and b is None:
+        return "—"
+    if a is None:
+        return t2
+    if b is None:
+        return t1
+    if a == b:
+        return t1
+    return (t1 if a < b else t2) if lower_better else (t1 if a > b else t2)
 
 @router.post("")
 async def run_comparison(req: CompareRequest):
@@ -92,34 +119,48 @@ async def run_comparison(req: CompareRequest):
             "pcr": opt2.get("pcr", 1.0)
         }
         
-        # Get AI comparison assessment — try Claude, fall back to Groq
-        try:
-            ai_res = await get_claude_comparison(t1, data1, t2, data2)
-        except Exception:
-            from services.groq_svc import get_groq_comparison
-            ai_res = await get_groq_comparison(t1, data1, t2, data2)
-
-        # Derive per-category winners from the real numbers (deterministic).
+        # ── Per-category winners from REAL numbers (fully deterministic) ──────
+        m1, m2 = _mcap(quote1.get("market_cap")), _mcap(quote2.get("market_cap"))
         winner_valuation = _pick(data1["pe"], data2["pe"], t1, t2, lower_better=True)
         winner_growth    = _pick(data1["roe"], data2["roe"], t1, t2, lower_better=False)
-        winner_momentum  = _pick(data1["change_pct"], data2["change_pct"], t1, t2, lower_better=False)
         winner_risk      = _pick(data1["de"], data2["de"], t1, t2, lower_better=True)
+        winner_scale     = _pick_val(m1, m2, t1, t2, lower_better=False)  # bigger company
 
-        ai_winner = (ai_res or {}).get("winner") or ""
-        overall_winner = ai_winner if ai_winner in (t1, t2) else (
-            t1 if [winner_valuation, winner_growth, winner_momentum, winner_risk].count(t1)
-                  >= 2 else t2
-        )
+        # Overall: who leads on more of the 4 weighted dimensions. Tie → bigger
+        # company (scale) wins. No AI free-text → no hallucination.
+        dims = [winner_valuation, winner_growth, winner_risk, winner_scale]
+        w1, w2 = dims.count(t1), dims.count(t2)
+        if w1 > w2:
+            overall_winner = t1
+        elif w2 > w1:
+            overall_winner = t2
+        else:
+            overall_winner = t1 if (m1 or 0) >= (m2 or 0) else t2
 
         def _strengths(sym):
             s = []
-            if winner_valuation == sym: s.append("More attractive valuation (lower P/E)")
-            if winner_growth == sym:    s.append("Higher return on equity (ROE)")
-            if winner_momentum == sym:  s.append("Stronger recent price momentum")
-            if winner_risk == sym:      s.append("Lower leverage (debt/equity)")
-            return s or ["Balanced fundamentals across key metrics"]
+            if winner_scale == sym:      s.append("Larger company by market capitalisation (scale leader)")
+            if winner_valuation == sym:  s.append("Cheaper on earnings (lower P/E)")
+            if winner_growth == sym:     s.append("Higher return on equity (ROE)")
+            if winner_risk == sym:       s.append("Lower leverage (debt/equity)")
+            return s or ["Balanced across the key metrics"]
+
+        # Factual, data-grounded summary — built from the real numbers only.
+        scale_leader = winner_scale if winner_scale in (t1, t2) else t1
+        value_leader = winner_valuation if winner_valuation in (t1, t2) else t1
+        summary = (
+            f"{t1} vs {t2}, on live fundamentals: "
+            f"P/E {data1['pe']} vs {data2['pe']} (cheaper: {winner_valuation}); "
+            f"ROE {data1['roe']} vs {data2['roe']} (higher: {winner_growth}); "
+            f"Debt/Equity {data1['de']} vs {data2['de']} (lower: {winner_risk}); "
+            f"market cap {quote1.get('market_cap')} vs {quote2.get('market_cap')} (larger: {winner_scale}). "
+            f"Overall edge: {overall_winner} (leads on more dimensions). "
+            f"In short, {scale_leader} is the larger, more dominant business by size, "
+            f"while {value_leader} is the cheaper stock on earnings — they suit different objectives."
+        )
 
         def _display(sym, q, f, o):
+            roe = f.get("roe", "N/A")
             return {
                 "ticker": sym,
                 "price": str(q.get("price", "N/A")),
@@ -127,7 +168,7 @@ async def run_comparison(req: CompareRequest):
                 "market_cap": str(q.get("market_cap", "N/A")),
                 "pe": str(f.get("pe", "N/A")),
                 "pb": str(f.get("pb", "N/A")),
-                "roe": f"{f.get('roe', 'N/A')}%",
+                "roe": f"{roe}%" if roe not in (None, "N/A") else "N/A",
                 "de": str(f.get("de", "N/A")),
                 "pcr": str(o.get("pcr", 1.0)),
             }
@@ -135,10 +176,10 @@ async def run_comparison(req: CompareRequest):
         # Flat shape — matches exactly what frontend Compare.jsx renders.
         return {
             "overall_winner": overall_winner,
-            "comparison_summary": (ai_res or {}).get("analysis", f"{t1} vs {t2} comparison."),
+            "comparison_summary": summary,
             "winner_valuation": winner_valuation,
             "winner_growth": winner_growth,
-            "winner_momentum": winner_momentum,
+            "winner_scale": winner_scale,
             "winner_risk": winner_risk,
             "ticker1_strengths": _strengths(t1),
             "ticker2_strengths": _strengths(t2),
