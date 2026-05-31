@@ -217,7 +217,6 @@ export default function StockView() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -227,7 +226,6 @@ export default function StockView() {
   const fetchStock = async (forceRefresh = false) => {
     const sym = ticker.toUpperCase();
     setLoading(true);
-    setError(null);
     setData(null);
     setAudioUrl(null);
     setPlaying(false);
@@ -255,7 +253,13 @@ export default function StockView() {
         localStorage.setItem("zo_recent_analyses", JSON.stringify([sym, ...stored.filter(s => s !== sym)].slice(0, 8)));
       } catch { /* ignore */ }
     } catch (err) {
-      setError(`Could not load data for ${sym}. The backend may be starting up — try again in a moment.`);
+      // Backend offline — fall back to demo data so the UI still works
+      const mock = generateMockStockData(sym);
+      setData({ ...mock, demo_mode: true });
+      try {
+        const stored = JSON.parse(localStorage.getItem("zo_recent_analyses") || "[]");
+        localStorage.setItem("zo_recent_analyses", JSON.stringify([sym, ...stored.filter(s => s !== sym)].slice(0, 8)));
+      } catch { /* ignore */ }
     } finally {
       setLoading(false);
     }
@@ -298,25 +302,6 @@ export default function StockView() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 gap-4 p-12">
-        <span className="material-symbols-outlined text-error text-5xl opacity-60">signal_disconnected</span>
-        <p className="font-title-md text-on-surface font-semibold">{ticker.toUpperCase()} — Analysis Failed</p>
-        <p className="text-sm text-on-surface-variant text-center max-w-sm">{error}</p>
-        <div className="flex gap-3">
-          <button onClick={() => fetchStock(true)}
-            className="px-5 py-2 bg-primary text-white rounded-lg font-label-caps text-sm hover:opacity-90 transition-opacity flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">refresh</span>Retry
-          </button>
-          <button onClick={() => navigate("/analyse")}
-            className="px-5 py-2 bg-surface-container border border-outline-variant text-on-surface rounded-lg font-label-caps text-sm hover:bg-surface-container-high transition-colors">
-            Try Another
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (!data && !loading) {
     return null;
@@ -326,6 +311,13 @@ export default function StockView() {
 
   return (
     <div className="p-gutter max-w-container-max mx-auto w-full">
+      {data?.demo_mode && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[12px]">
+          <span className="material-symbols-outlined text-[16px] shrink-0">info</span>
+          <span><strong>Demo mode</strong> — backend offline. Showing illustrative data for {ticker.toUpperCase()}. Start the local backend for live NSE analysis.</span>
+          <button onClick={() => fetchStock(true)} className="ml-auto shrink-0 text-[11px] font-bold underline hover:no-underline">Retry live</button>
+        </div>
+      )}
       {audioUrl && (
         <audio ref={audioRef} src={audioUrl} onEnded={() => setPlaying(false)} className="hidden" />
       )}

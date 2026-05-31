@@ -1,36 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-function FAQAccordion() {
-  const [open, setOpen] = useState(null);
-  const FAQS = [
-    { q: "Is this real-time NSE data?", a: "Yes. ZeroOne uses Anakin Wire connectors that pull live data from NSE India, BSE, Screener.in, Economic Times, and Moneycontrol simultaneously. When API keys are configured, all data is live." },
-    { q: "Is this financial advice?", a: "No. ZeroOne is an AI-powered research tool. All output is informational only. Always verify with a SEBI-registered advisor before making investment decisions." },
-    { q: "Which stocks are covered?", a: "All NSE-listed stocks are supported. The top 500 stocks have enhanced fundamental data via Screener.in. Any valid NSE symbol can be analysed." },
-    { q: "How fast is the analysis?", a: "Average end-to-end analysis takes 3.2 seconds. All 16 data source calls run in parallel using asyncio.gather. Groq's LPU delivers AI inference in under 1 second." },
-    { q: "What is the 'promoter trust score'?", a: "A 0–100 score computed from promoter holding %, pledging %, insider trading patterns, and bulk deal history. Above 80 is considered trustworthy, below 50 warrants caution." },
-    { q: "Does it work on mobile?", a: "Yes. ZeroOne is fully responsive. The AI Assistant, Analyse page, and MarketPulse work great on mobile. Voice narration requires Chrome on Android or Safari on iOS." },
-  ];
-  return (
-    <div className="space-y-2">
-      {FAQS.map(({ q, a }, i) => (
-        <div key={i} className="border border-[#e8e4f0] rounded-xl overflow-hidden">
-          <button
-            onClick={() => setOpen(open === i ? null : i)}
-            className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#faf9ff] transition-colors"
-          >
-            <span className="text-[14px] font-semibold text-[#0d0d0d]">{q}</span>
-            <span className="material-symbols-outlined text-[18px] text-[#5317dd] shrink-0 ml-3 transition-transform" style={{ transform: open === i ? 'rotate(180deg)' : 'rotate(0deg)' }}>expand_more</span>
-          </button>
-          {open === i && (
-            <div className="px-5 pb-4 text-[13px] text-[#797487] leading-relaxed border-t border-[#f0ebff]">{a}</div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function Landing() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -542,7 +512,7 @@ export default function Landing() {
               Built for the Indian retail investor who is tired of switching between 7 tabs to get a full picture.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               {
                 icon: "auto_awesome",
@@ -571,41 +541,6 @@ export default function Landing() {
                 bg: "#fef3e2",
                 title: "Promoter Intel",
                 desc: "Promoter holding %, pledging %, insider trades, and bulk deals in one panel. The most reliable signal in India."
-              },
-              {
-                icon: "record_voice_over",
-                color: "#be185d",
-                bg: "#fde7f3",
-                title: "Voice Narration",
-                desc: "ElevenLabs TTS reads your stock analysis aloud. Get your morning briefing while commuting."
-              },
-              {
-                icon: "compare_arrows",
-                color: "#7c3aed",
-                bg: "#ede9fe",
-                title: "Stock Compare",
-                desc: "GPT-4o compares two stocks head-to-head across valuation, growth, momentum, and risk. Decisive winner output."
-              },
-              {
-                icon: "picture_as_pdf",
-                color: "#dc2626",
-                bg: "#fde8e8",
-                title: "PDF Reports",
-                desc: "Download a full Gemini-generated equity research report for any stock. Shareable, printable, institutional-grade."
-              },
-              {
-                icon: "donut_small",
-                color: "#0891b2",
-                bg: "#e0f7fa",
-                title: "Sector Rotation",
-                desc: "FII and DII net flow by sector, heatmap, and top movers. Know which sectors institutions are rotating into today."
-              },
-              {
-                icon: "schedule",
-                color: "#059669",
-                bg: "#d1fae5",
-                title: "Earnings Radar",
-                desc: "Alerts when a stock in your watchlist reports earnings within 72 hours. Beat probability from options IV."
               },
             ].map(({ icon, color, bg, title, desc }) => (
               <div key={title} className="bg-white border border-[#e8e4f0] rounded-2xl p-6 hover:shadow-md hover:-translate-y-0.5 transition-all group">
@@ -901,17 +836,6 @@ export default function Landing() {
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-[80px] bg-white border-b border-[#cac3d9]/30">
-        <div className="max-w-[700px] mx-auto px-8">
-          <div className="text-center mb-12">
-            <span className="text-[11px] font-bold text-[#5317dd] tracking-[0.2em] uppercase block mb-3">FAQ</span>
-            <h2 className="text-[32px] font-bold text-[#0d0d0d] tracking-tight">Questions we get a lot</h2>
-          </div>
-          <FAQAccordion />
         </div>
       </section>
 
